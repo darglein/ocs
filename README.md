@@ -2,6 +2,7 @@
 
 OCS is an open source GPU implemenation of SIFT feature detection and matching. The CUDA code is a direct port of [OpenCV's SIFT implementation](https://github.com/opencv/opencv_contrib/blob/master/modules/xfeatures2d/src/sift.cpp).
 
+<img src="data/features_ref.jpg" width="600"/> 
 
 ## Differences to OpenCV
 
