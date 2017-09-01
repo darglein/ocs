@@ -17,12 +17,13 @@ OCS is an open source GPU implemenation of SIFT feature detection and matching. 
 ## Timings - Feature Detection (todo)
 
 The following SIFT settings were used for the tests:
-doubleScale = false
-octaveLayers = 3
-contrastThresold = 0.04
-edgeThreshold = 10
-sigma = 1.6
-maxDescriptorRadius = 16
+
+* doubleScale = false
+* octaveLayers = 3
+* contrastThresold = 0.04
+* edgeThreshold = 10
+* sigma = 1.6
+* maxDescriptorRadius = 16
 
 
 | Image Size   |      640x480      | 1280x720 | 1920x1080 | 4096x2304 | 
@@ -36,6 +37,10 @@ maxDescriptorRadius = 16
 
 Time in (ms) for the knn search with k=4.
 
+| Name     | Character |
+| ---      | ---       |
+| Backtick | `         |
+| Pipe     | \|        |
 
 ## Dependencies
 
@@ -46,5 +51,9 @@ Time in (ms) for the knn search with k=4.
 ## TODO
 
  * Remove Saiga dependency by copying the required files.
- * Increase keypoint detection time
+ * Increase keypoint detection performance
+
+## License
+
+The OCS ocde is licensed under the MIT License, but you also have to comply with [OpenCV's license](https://github.com/opencv/opencv_contrib/blob/master/LICENSE). The SIFT algorithm itself is [patented](https://www.google.com/patents/US6711293) and not free for commercial use.
 
