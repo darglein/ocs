@@ -3,6 +3,7 @@
 OCS is an open source GPU implemenation of SIFT feature detection and matching. The CUDA code is a direct port of [OpenCV's SIFT implementation](https://github.com/opencv/opencv_contrib/blob/master/modules/xfeatures2d/src/sift.cpp).
 
 <img src="data/features_ref.jpg" width="600"/> 
+<img src="data/matches_ref.jpg" /> 
 
 ## Differences to OpenCV
 
@@ -27,21 +28,22 @@ The following SIFT settings were used for the tests:
 * maxDescriptorRadius = 16
 
 
-| Time in ms   |      640x480      | 1280x720 | 1920x1080 | 4096x2304 | 
-| --- | --- | --- | --- |--- |
-| GTX 970 | 10.01 | 10.01 | 10.01 | 10.01 |
-| GTX 970 | 10.01 | 10.01 | 10.01 | 10.01 |
-| GTX 970 | 10.01 | 10.01 | 10.01 | 10.01 |
+| Image Size  |      640x480      | 1280x720 | 1920x1080 | 3000x1688 | 4096x2304 | 
+| --- | --- | --- | --- |--- |--- |
+| #Features | 990 | 1408 | 1700 | 3382 |6184 |
+| GTX 1080 | 10.01 | 10.01 | 10.01 | 10.01 |10.01 |
+| GTX 970 | 10.01 | 10.01 | 10.01 | 10.01 |10.01 |
+| GTX 760M | 9.10 | 17.2 | 29.4 | 60.2 | 105.6 |
 
 ## Timings - Matching (todo)
 
 Time in (ms) for the knn search with k=4.
 
-| Time in ms   |      640x480      | 1280x720 | 1920x1080 | 4096x2304 | 
-| --- | --- | --- | --- |--- |
-| GTX 970 | 10.01 | 10.01 | 10.01 | 10.01 |
-| GTX 970 | 10.01 | 10.01 | 10.01 | 10.01 |
-| GTX 970 | 10.01 | 10.01 | 10.01 | 10.01 |
+| Match Size   |      990x990      | 1408x1408 | 1700x1700 | 3382x3382 |  6184x6184 | 
+| --- | --- | --- | --- |--- |--- |
+| GTX 1080 | 10.01 | 10.01 | 10.01 | 10.01 |10.01 |
+| GTX 970 | 10.01 | 10.01 | 10.01 | 10.01 |10.01 |
+| GTX 760M | 3.60 | 7.09 | 10.59 |  40.18 | 119.67 |
 
 ## Dependencies
 
