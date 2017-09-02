@@ -108,6 +108,7 @@
 
 #pragma once
 
+#include "saiga/cuda/common.h"
 
 /******************************* Defs and macros (different from OpenCV) *****************************/
 
@@ -127,7 +128,7 @@ static const int GAUSSIAN_KERNEL_RADIUS = 4;
 
 
 /******************************* Defs and macros *****************************/
-
+//Note: we need to use defines for floats instead of static const, because visual studio + nvcc :(
 
 // default width of descriptor histogram array
 static const int SIFT_DESCR_WIDTH = 4;
@@ -149,24 +150,24 @@ static const int SIFT_ORI_HIST_BINS = 36;
 
 
 // determines gaussian sigma for orientation assignment
-static const float SIFT_ORI_SIG_FCTR = 1.5f;
+#define SIFT_ORI_SIG_FCTR 1.5f
 
 // determines the radius of the region used in orientation assignment
-static const float SIFT_ORI_RADIUS = 3 * SIFT_ORI_SIG_FCTR;
+#define SIFT_ORI_RADIUS (3 * SIFT_ORI_SIG_FCTR)
 
 // orientation magnitude relative to max that results in new feature
-static const float SIFT_ORI_PEAK_RATIO = 0.8f;
+#define SIFT_ORI_PEAK_RATIO 0.8f
 
 // determines the size of a single descriptor orientation histogram
-static const float SIFT_DESCR_SCL_FCTR = 3.f;
+#define SIFT_DESCR_SCL_FCTR  3.f
 
 // threshold on magnitude of elements of descriptor vector
-static const float SIFT_DESCR_MAG_THR = 0.2f;
+#define SIFT_DESCR_MAG_THR 0.2f
 
 
 // factor used to convert floating-point descriptor to unsigned char
 //static const float SIFT_INT_DESCR_FCTR = 512.f;
-static const float SIFT_INT_DESCR_FCTR = 1.f;
+#define SIFT_INT_DESCR_FCTR 1.f
 
 // intermediate type used for DoG pyramids
 typedef float sift_wt;

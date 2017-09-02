@@ -115,8 +115,9 @@
 
 using Saiga::ImageView;
 
+
 //size = 8 * sizeof(int) = 32 bytes
-struct __attribute__((aligned(32))) SiftPoint {
+struct GLM_ALIGN(32) SiftPoint {
     float xpos;
     float ypos;
     //local pixel position in the current octave

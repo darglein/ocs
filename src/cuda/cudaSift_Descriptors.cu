@@ -106,6 +106,7 @@
 //    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**********************************************************************************************/
 
+#define _USE_MATH_DEFINES
 #include "cudaSift.h"
 #include "saiga/cuda/thread_info.h"
 #include "saiga/cuda/reduce.h"
@@ -113,6 +114,7 @@
 
 using std::cout;
 using std::endl;
+
 
 template<unsigned int THREADS_PER_BLOCK, int MAX_RADIUS>
 __device__ inline
