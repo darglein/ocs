@@ -1,0 +1,5 @@
+ocs
+*.features.jpg
+*.jpg.jpg
+ocs.*
+build/

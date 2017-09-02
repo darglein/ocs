@@ -15,6 +15,7 @@ void detectedKeypointsTest(){
         "small.jpg",
         "medium.jpg",
         "big.jpg",
+        "landscape_small.jpg",
         "landscape.jpg",
     };
 
@@ -66,10 +67,18 @@ void detectedKeypointsTest(){
 
 void matchTest(){
     std::vector<std::string> imageFiles1 = {
+        "small.jpg",
         "medium.jpg",
+        "big.jpg",
+        "landscape_small.jpg",
+        "landscape.jpg",
     };
     std::vector<std::string> imageFiles2 = {
+        "small.jpg",
         "medium.jpg",
+        "big.jpg",
+        "landscape_small.jpg",
+        "landscape.jpg",
     };
 
     for(int i =0; i < imageFiles1.size() ; ++i){
@@ -78,8 +87,13 @@ void matchTest(){
         cv::Mat1f img1 = cv::imread("data/"+imageFiles1[i],cv::IMREAD_GRAYSCALE);
         cv::Mat1f img2 = cv::imread("data/"+imageFiles2[i],cv::IMREAD_GRAYSCALE);
 
-        Saiga::CUDA::CudaImage<float> cimg1(Saiga::MatToImageView<float>(img1));
-        Saiga::CUDA::CudaImage<float> cimg2(Saiga::MatToImageView<float>(img2));
+        Saiga::CUDA::CudaImage<float> cimg1(img1.cols,img1.rows,Saiga::iAlignUp(img1.cols*sizeof(float),256));
+        copyImage(Saiga::MatToImageView<float>(img1),cimg1,cudaMemcpyHostToDevice);
+
+        Saiga::CUDA::CudaImage<float> cimg2(img2.cols,img2.rows,Saiga::iAlignUp(img2.cols*sizeof(float),256));
+        copyImage(Saiga::MatToImageView<float>(img2),cimg2,cudaMemcpyHostToDevice);
+//        Saiga::CUDA::CudaImage<float> cimg1(Saiga::MatToImageView<float>(img1));
+//        Saiga::CUDA::CudaImage<float> cimg2(Saiga::MatToImageView<float>(img2));
 
         int maxFeatures = 10000;
         SIFTGPU sift(cimg1.width,cimg1.height,false,-1,maxFeatures,3,0.04,10,1.6);
@@ -93,6 +107,7 @@ void matchTest(){
         int extractedPoints2 = sift.compute(cimg2,keypoints2,descriptors2);
 
 
+        cout << "Match size: " << extractedPoints1 << "x" << extractedPoints2 << endl;
 
         MatchGPU matcher( std::max(extractedPoints1,extractedPoints2) );
         matcher.initMemory();
@@ -117,7 +132,7 @@ void matchTest(){
         for(int i = 0; i < extractedPoints1; ++i){
             float d1 = hdistances[i*K+0];
             float d2 = hdistances[i*K+1];
-            if(d1 < 0.8f * d2){
+            if(d1 < 0.7f * d2){
                 int id = hindices[i*K+0];
                 cv::DMatch m;
                 m.distance = d1;
@@ -142,10 +157,11 @@ void matchTest(){
             cv::Mat img2 = cv::imread("data/"+imageFiles2[i]);
             //create debug match image
             cv::Mat outImg;
-            cv::drawMatches(img1,cvkeypoints1,img2,cvkeypoints2,cvmatches,outImg);
-            cv::imwrite("data/matches.jpg",outImg);
+            cv::drawMatches(img1,cvkeypoints1,img2,cvkeypoints2,cvmatches,outImg,cv::Scalar(0,0,255),cv::Scalar(0,255,0),std::vector<char>(),cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
+            cv::imwrite("data/matches_"+imageFiles1[i]+"_"+imageFiles2[i]+".jpg",outImg);
         }
 
+        cout << endl;
     }
 
 }
