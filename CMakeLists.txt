@@ -23,22 +23,11 @@ set (PROGRAM_VERSION_MINOR 0)
 
 
 
-######### Show all warnings
-
-if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
-  # Update if necessary
- # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-long-long -pedantic")
-endif()
-
-
-
-
-
 ############# Required LIBRARIES ###############
 
 ############# CUDA ###############
 
-find_package(CUDA QUIET)
+find_package(CUDA REQUIRED)
 if(CUDA_FOUND)
 	include_directories(${CUDA_INCLUDE_DIRS})
 	SET(ALL_CUDA_LIBS ${CUDA_LIBRARIES} ${CUDA_cusparse_LIBRARY} ${CUDA_cublas_LIBRARY})
@@ -64,8 +53,6 @@ if(CUDA_FOUND)
 	if(UNIX)
 	      set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcompiler -fPIC)
 	endif()
-
-	SET(SAIGA_USE_CUDA 1)
 endif()
 
 
@@ -90,19 +77,32 @@ message(STATUS "OpenCV: ${OpenCV_INCLUDE_DIRS} ${OpenCV_LIBRARIES}")
 
 ############# COMPILER FLAGS ###############
 
+
 if(UNIX)
-#-fsanitize=address
 	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 endif(UNIX)
 
-if(WIN32)
-	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP") #multiprocessor compilation for visual studio
-endif(WIN32)
+if(MSVC)
+	#multiprocessor compilation for visual studio
+	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP") 
+endif()
+
+if(CUDA_DEBUG)
+	add_definitions(-DCUDA_DEBUG)
+else()
+	add_definitions(-DCUDA_NDEBUG)
+endif()
+
 ############# SOURCE ###############
 
 add_subdirectory(src)
 
 #############  output dir ############# 
+
+if(MSVC)
+	#visual studio working dir
+	set_target_properties(${PROG_NAME} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+endif()
 
 #copies executable to top level source tree
 set_target_properties( ${PROG_NAME}

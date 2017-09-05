@@ -108,12 +108,11 @@
 
 #pragma once
 
-#define CUDA_NDEBUG
 
 #include "saiga/cuda/cudaHelper.h"
 #include "saiga/cuda/imageProcessing/image.h"
 #include "sift_base.h"
-
+ 
 
 class SIFTGPU : public SIFTBase{
 public:

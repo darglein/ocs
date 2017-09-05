@@ -19,6 +19,8 @@ void detectedKeypointsTest(){
         "landscape.jpg",
     };
 
+	int iterations = 10;
+
     for(auto str : imageFiles){
 
         //load image with opencv
@@ -37,10 +39,19 @@ void detectedKeypointsTest(){
         thrust::device_vector<SiftPoint> keypoints(maxFeatures);
         thrust::device_vector<float> descriptors(maxFeatures * 128);
         int extractedPoints;
-        float time;
+        float time = 34544563456565;
         {
-            Saiga::CUDA::CudaScopedTimer timer(time);
-            extractedPoints = sift.compute(cimg,keypoints,descriptors);
+            
+			for (int i = 0; i < iterations; ++i) {
+				float t;
+				{
+					Saiga::CUDA::CudaScopedTimer timer(t);
+					extractedPoints = sift.compute(cimg, keypoints, descriptors);
+				}
+				//optimistic minimum timer :)
+				time = std::min(t, time);
+			}
+				
         }
 
         cout << "Extracted " << extractedPoints << " keypoints in " << time << "ms." << endl;
@@ -80,6 +91,7 @@ void matchTest(){
         "landscape_small.jpg",
         "landscape.jpg",
     };
+	int iterations = 10;
 
     for(int i =0; i < imageFiles1.size() ; ++i){
 
@@ -115,13 +127,22 @@ void matchTest(){
         int K = 4;
         thrust::device_vector<float> distances(extractedPoints1 * K);
         thrust::device_vector<int> indices(extractedPoints1 * K);
-        {
-            Saiga::CUDA::CudaScopedTimerPrint timer("knnmatch");
-            matcher.knnMatch( Saiga::array_view<float>(descriptors1).slice_n(0,extractedPoints1*128),
-                              Saiga::array_view<float>(descriptors2).slice_n(0,extractedPoints2*128),
-                              distances,indices, K
-                              );
+		float time = 35453426436346;
+		{
+			for (int i = 0; i < iterations; ++i) {
+				float t;
+				{
+					Saiga::CUDA::CudaScopedTimer timer(t);
+					matcher.knnMatch(Saiga::array_view<float>(descriptors1).slice_n(0, extractedPoints1 * 128),
+						Saiga::array_view<float>(descriptors2).slice_n(0, extractedPoints2 * 128),
+						distances, indices, K
+					);
+				}
+				//optimistic minimum timer :)
+				time = std::min(t, time);
+			}
         }
+		cout << "knnMatch finished in " << time  << "ms." << endl;
 
         //copy to host
         thrust::host_vector<float> hdistances = distances;
