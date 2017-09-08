@@ -37,7 +37,7 @@ All timings are given in milli seconds (ms).
 
 ## Timings - Matching
 
-Time in (ms) for a knn search with k=4. The match size gives the number of keypoints/descriptors for each image. In the largest test (6184x6184) a total number of 38241856 Sift descriptor comparisons where performed.
+Time in (ms) for a knn search with k=4. The match size gives the number of keypoints/descriptors for each image. In the largest test (6184x6184) a total number of 38241856 Sift descriptor comparisons were performed.
 
 | Match Size   |      990x990      | 1408x1408 | 1700x1700 | 3382x3382 |  6184x6184 | 
 | --- | --- | --- | --- |--- |--- |
