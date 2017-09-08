@@ -19,7 +19,7 @@ void detectedKeypointsTest(){
         "landscape.jpg",
     };
 
-	int iterations = 10;
+	int iterations = 50;
 
     for(auto str : imageFiles){
 
@@ -91,7 +91,7 @@ void matchTest(){
         "landscape_small.jpg",
         "landscape.jpg",
     };
-	int iterations = 10;
+	int iterations = 50;
 
     for(int i =0; i < imageFiles1.size() ; ++i){
 

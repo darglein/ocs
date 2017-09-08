@@ -107,6 +107,7 @@
 \**********************************************************************************************/
 
 #define _USE_MATH_DEFINES
+#include <math.h>
 #include "cudaSift.h"
 #include "saiga/cuda/thread_info.h"
 #include "saiga/cuda/reduce.h"
