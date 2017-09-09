@@ -168,7 +168,7 @@ __device__ inline
 void deriveSecond(float buffer[3][3][3], float derivs2[6]){
 
     const float img_scale = 1.f/(255*SIFT_FIXPT_SCALE);
-//    const float deriv_scale = img_scale*0.5f;
+    //    const float deriv_scale = img_scale*0.5f;
     const float second_deriv_scale = img_scale;
     const float cross_deriv_scale = img_scale*0.25f;
     float v2 = buffer[1][1][1] * 2.0f;
@@ -340,7 +340,7 @@ void d_FindPointsMulti2(
             unsigned int idx = atomicInc(pointCounter, 0x7fffffff);
             if(idx < maxFeatures){
                 SiftPoint& sp = d_Sift[idx];
-//                SiftPoint sp;
+                //                SiftPoint sp;
                 sp.ixpos = x;
                 sp.iypos = y;
                 sp.xpos = (x + xc)  * (1 << octave);
@@ -349,7 +349,7 @@ void d_FindPointsMulti2(
                 sp.size = sigma * powf(2.f, float(layer + xi) / layers)*(1 << octave) * 2;
                 sp.response = abs(contr);
                 sp.orientation = 0;
-//                Saiga::CUDA::vectorCopy(&sp,d_Sift.data()+idx);
+                //                Saiga::CUDA::vectorCopy(&sp,d_Sift.data()+idx);
             }else{
                 atomicDec(pointCounter, 0x7fffffff);
             }
@@ -359,19 +359,279 @@ void d_FindPointsMulti2(
 }
 
 
+template<unsigned int TILE_W, unsigned int TILE_H, unsigned int TILE_D>
+__global__ static
+void d_FindPointsMulti3(
+        Saiga::ImageArrayView<float> images,
+        Saiga::array_view<SiftPoint> d_Sift,
+        unsigned int* pointCounter,
+        float contrastThreshold, float edgeThreshold, int octave, int layers, float sigma, int maxFeatures, int threshold)
+{
+
+    const unsigned int tx = threadIdx.x;
+    const unsigned int ty = threadIdx.y;
+    const unsigned int tz = threadIdx.z;
+    const unsigned int t = tz * TILE_W * TILE_H + ty * TILE_W + tx;
+
+    const unsigned int x_tile = blockIdx.x * TILE_W;
+    const unsigned int y_tile = blockIdx.y * TILE_H;
+    const unsigned int z_tile = blockIdx.z * TILE_D + 1;
+
+    const unsigned int xo = x_tile + tx;
+    const unsigned int yo = y_tile + ty;
+    const unsigned int zo = z_tile + tz;
+
+    const unsigned int TILE_SIZE = TILE_D * TILE_H * TILE_W;
+    const unsigned int TILE_SIZE_WITH_BORDER = (TILE_D+2) * (TILE_H+2) * (TILE_W+2);
+    __shared__ float sbuffer[TILE_D + 2][TILE_H + 2][TILE_W + 2];
+
+    //coalseced load to shared buffer
+    for(int iz = 0; iz < (TILE_D + 2); iz++){
+        WARP_FOR (i,t, (TILE_W+2) * (TILE_H+2), TILE_SIZE)
+        {
+            int ix = i % (TILE_W+2);
+            int iy = i / (TILE_W+2);
+
+            int gx = x_tile + ix - 1;
+            int gy = y_tile + iy - 1;
+            int gz = z_tile + iz - 1;
+//            if(images.imgStart.inImage(gx,gy))
+//                sbuffer[iz][iy][ix] = images(gx,gy,gz);
+
+        }
+    }
+
+
+
+    float buffer[1][3][3][3];
+    const int bufferOffset = 0;
+
+
+    //don't produce keypoint at the border
+    if(xo < SIFT_IMG_BORDER || yo < SIFT_IMG_BORDER || xo >= images.imgStart.width-SIFT_IMG_BORDER || yo >= images.imgStart.height-SIFT_IMG_BORDER){
+        return;
+    }
+
+    int x = xo;
+    int y = yo;
+    int layer = zo;
+
+
+    //fast check to eliminate most candidates
+    float& val = buffer[bufferOffset][1][1][1];
+    val = images[layer](x,y);
+
+    if(abs(val) < threshold){
+        return;
+    }
+
+    loadBuffer(images,buffer[bufferOffset],x,y,layer);
+
+    //find maximum and minimum value in a 3x3x3 neighborhood
+    float minN,maxN;
+    findMinMax(buffer[bufferOffset],minN,maxN);
+
+    if( !(val > 0 && val >= maxN) && !(val < 0 && val <= minN)){
+        return;
+    }
+
+    float xi=0, xr=0, xc=0, contr=0;
+    int i = 0;
+
+    {
+        float3 dD;
+        derive(buffer[bufferOffset],dD);
+
+        const float img_scale = 1.f/(255*SIFT_FIXPT_SCALE);
+
+        float t = xc * dD.x + xr * dD.y + xi * dD.z;
+        contr = buffer[bufferOffset][1][1][1] * img_scale + t * 0.5f;
+        if( abs( contr ) * layers < contrastThreshold)
+            return;
+    }
+
+    {
+        //check edge threshold
+        //principal curvatures are computed using the trace and det of Hessian
+        float derivs2[6]; //xx,yy,ss,xy,xs,ys
+        deriveSecond(buffer[bufferOffset],derivs2);
+
+        float tr = derivs2[0] + derivs2[1];
+        float det = derivs2[0] * derivs2[1] - derivs2[3] * derivs2[3];
+
+        if( det <= 0 || tr*tr*edgeThreshold >= (edgeThreshold + 1)*(edgeThreshold + 1)*det )
+            return;
+    }
+
+    if(true){
+        unsigned int idx = atomicInc(pointCounter, 0x7fffffff);
+        if(idx < maxFeatures){
+            SiftPoint& sp = d_Sift[idx];
+            //                SiftPoint sp;
+            sp.ixpos = x;
+            sp.iypos = y;
+            sp.xpos = (x + xc)  * (1 << octave);
+            sp.ypos = (y + xr)  * (1 << octave);
+            sp.packOctave(octave,layer);
+            sp.size = sigma * powf(2.f, float(layer + xi) / layers)*(1 << octave) * 2;
+            sp.response = abs(contr);
+            sp.orientation = 0;
+            //                Saiga::CUDA::vectorCopy(&sp,d_Sift.data()+idx);
+        }else{
+            atomicDec(pointCounter, 0x7fffffff);
+        }
+    }
+
+
+}
+
+template<unsigned int TILE_W, unsigned int TILE_H, unsigned int TILE_D>
+__global__ static
+void d_FindPointsMulti4(
+        Saiga::ImageArrayView<float> images,
+        Saiga::array_view<SiftPoint> d_Sift,
+        unsigned int* pointCounter,
+        float contrastThreshold, float edgeThreshold, int octave, int layers, float sigma, int maxFeatures, int threshold)
+{
+
+    const unsigned int tx = threadIdx.x;
+    const unsigned int ty = threadIdx.y;
+    const unsigned int tz = threadIdx.z;
+    const unsigned int t = tz * TILE_W * TILE_H + ty * TILE_W + tx;
+
+    const unsigned int x_tile = blockIdx.x * TILE_W;
+    const unsigned int y_tile = blockIdx.y * TILE_H;
+    const unsigned int z_tile = blockIdx.z * TILE_D + 1;
+
+    const unsigned int xo = x_tile + tx;
+    const unsigned int yo = y_tile + ty;
+    const unsigned int zo = z_tile + tz;
+
+    const unsigned int TILE_SIZE = TILE_D * TILE_H * TILE_W;
+    const unsigned int TILE_SIZE_WITH_BORDER = (TILE_D+2) * (TILE_H+2) * (TILE_W+2);
+    __shared__ float sbuffer[TILE_D + 2][TILE_H + 2][TILE_W + 2];
+
+
+
+    float buffer[1][3][3][3];
+    const int bufferOffset = 0;
+
+
+    //don't produce keypoint at the border
+    if(xo < SIFT_IMG_BORDER || yo < SIFT_IMG_BORDER || xo >= images.imgStart.width-SIFT_IMG_BORDER || yo >= images.imgStart.height-SIFT_IMG_BORDER){
+        return;
+    }
+
+    int x = xo;
+    int y = yo;
+    int layer = zo;
+
+
+    //fast check to eliminate most candidates
+    float& val = buffer[bufferOffset][1][1][1];
+    val = images[layer](x,y);
+
+    if(abs(val) < threshold){
+        return;
+    }
+
+    loadBuffer(images,buffer[bufferOffset],x,y,layer);
+
+    //find maximum and minimum value in a 3x3x3 neighborhood
+    float minN,maxN;
+    findMinMax(buffer[bufferOffset],minN,maxN);
+
+    if( !(val > 0 && val >= maxN) && !(val < 0 && val <= minN)){
+        return;
+    }
+
+    float xi=0, xr=0, xc=0, contr=0;
+    int i = 0;
+
+    {
+        float3 dD;
+        derive(buffer[bufferOffset],dD);
+
+        const float img_scale = 1.f/(255*SIFT_FIXPT_SCALE);
+
+        float t = xc * dD.x + xr * dD.y + xi * dD.z;
+        contr = buffer[bufferOffset][1][1][1] * img_scale + t * 0.5f;
+        if( abs( contr ) * layers < contrastThreshold)
+            return;
+    }
+
+    {
+        //check edge threshold
+        //principal curvatures are computed using the trace and det of Hessian
+        float derivs2[6]; //xx,yy,ss,xy,xs,ys
+        deriveSecond(buffer[bufferOffset],derivs2);
+
+        float tr = derivs2[0] + derivs2[1];
+        float det = derivs2[0] * derivs2[1] - derivs2[3] * derivs2[3];
+
+        if( det <= 0 || tr*tr*edgeThreshold >= (edgeThreshold + 1)*(edgeThreshold + 1)*det )
+            return;
+    }
+
+    if(true){
+        unsigned int idx = atomicInc(pointCounter, 0x7fffffff);
+        if(idx < maxFeatures){
+            SiftPoint& sp = d_Sift[idx];
+            //                SiftPoint sp;
+            sp.ixpos = x;
+            sp.iypos = y;
+            sp.xpos = (x + xc)  * (1 << octave);
+            sp.ypos = (y + xr)  * (1 << octave);
+            sp.packOctave(octave,layer);
+            sp.size = sigma * powf(2.f, float(layer + xi) / layers)*(1 << octave) * 2;
+            sp.response = abs(contr);
+            sp.orientation = 0;
+            //                Saiga::CUDA::vectorCopy(&sp,d_Sift.data()+idx);
+        }else{
+            atomicDec(pointCounter, 0x7fffffff);
+        }
+    }
+
+
+}
 void SIFTGPU::FindPointsMulti(Saiga::array_view<SiftPoint> keypoints, Saiga::ImageArrayView<float> images, int o){
 #ifdef SIFT_PRINT_TIMINGS
     Saiga::CUDA::CudaScopedTimerPrint tim("SIFTGPU::FindPointsMulti");
 #endif
-    const int BLOCK_SIZE = 128;
-    const int LOCAL_WARP_SIZE = 1;
-    dim3 blocks(Saiga::iDivUp(images[0].width, BLOCK_SIZE / LOCAL_WARP_SIZE), images[0].height);
-    dim3 threads(BLOCK_SIZE,1,1);
+    int w = images[0].width;
+    int h = images[0].height;
+    int d = nOctaveLayers;
+    cout << "FindPointsMulti size: " << w << "x" << h << "x" << d << endl;
+    cout << "Number of inner pixels: " << w*h*d << endl;
 
     int threshold = Saiga::iFloor(0.5 * contrastThreshold / nOctaveLayers * 255 * SIFT_FIXPT_SCALE);
+
+
+#if 1
+    const int BLOCK_SIZE = 128;
+    const int LOCAL_WARP_SIZE = 1;
+    dim3 blocks(Saiga::iDivUp(w, BLOCK_SIZE / LOCAL_WARP_SIZE), h);
+    dim3 threads(BLOCK_SIZE,1,1);
     d_FindPointsMulti2<BLOCK_SIZE,LOCAL_WARP_SIZE><<<blocks,threads>>>(images,
-                                                       keypoints,
-                                                       thrust::raw_pointer_cast(pointCounter.data()),
-                                                       contrastThreshold,edgeThreshold,o,nOctaveLayers,sigma,nfeatures,threshold);
+                                                                       keypoints,
+                                                                       thrust::raw_pointer_cast(pointCounter.data()),
+                                                                       contrastThreshold,edgeThreshold,o,nOctaveLayers,sigma,nfeatures,threshold);
+#else
+
+    const int TILE_W = 32;
+    const int TILE_H = 16;
+    const int TILE_D = 1;
+    dim3 blocks(
+                Saiga::iDivUp(w, TILE_W),
+                Saiga::iDivUp(h, TILE_H),
+                Saiga::iDivUp(d, TILE_D)
+                );
+    dim3 threads(TILE_W,TILE_H,TILE_D);
+    d_FindPointsMulti4<TILE_W,TILE_H,TILE_D><<<blocks,threads>>>(images,
+                                                                 keypoints,
+                                                                 thrust::raw_pointer_cast(pointCounter.data()),
+                                                                 contrastThreshold,edgeThreshold,o,nOctaveLayers,sigma,nfeatures,threshold);
+
+#endif
     CUDA_SYNC_CHECK_ERROR();
 }

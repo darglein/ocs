@@ -117,7 +117,7 @@
 //#define SIFT_SINGLE_PASS_BLUR
 
 #define SIFT_DESCRIPTOR_SIZE 128
-//#define SIFT_DO_SUBPIXEL_INTERPOLATION
+#define SIFT_DO_SUBPIXEL_INTERPOLATION
 
 // maximum sample radius in gradient image
 static const int SIFT_ORI_MAX_RADIUS = 32;
