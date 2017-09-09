@@ -125,7 +125,7 @@ static float calcOrientationHistWarp(  ImageView<float> d_img,
     const int n = SIFT_ORI_HIST_BINS;
     //    const int RADIUS = 8;
     const int len = (RADIUS*2+1)*(RADIUS*2+1);
-    int i, j, k;
+    int i, j;
 
     float expf_scale = -1.f/(2.f * sigma * sigma);
 

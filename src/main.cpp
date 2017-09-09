@@ -11,6 +11,6 @@ void matchTest();
 
 int main(int argc, char *argv[]) {
     detectedKeypointsTest();
-    matchTest();
+//    matchTest();
     return 0;
 }

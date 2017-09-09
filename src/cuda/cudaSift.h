@@ -112,7 +112,10 @@
 #include "saiga/cuda/cudaHelper.h"
 #include "saiga/cuda/imageProcessing/image.h"
 #include "sift_base.h"
- 
+
+#ifdef SIFT_DEBUG
+#include "saiga/opencv/opencv.h"
+#endif
 
 class SIFTGPU : public SIFTBase{
 public:
@@ -146,7 +149,12 @@ protected:
     thrust::device_vector<float> initialBlurKernel;
     std::vector<thrust::device_vector<float>> octaveBlurKernels;
 
-    float *memorygpyramid = 0;
-    float *memorydogpyramid = 0;
+    thrust::device_vector<uint8_t> memorygpyramid;
+    thrust::device_vector<uint8_t> memorydogpyramid;
+
+#ifndef SIFT_SINGLE_PASS_BLUR
+    thrust::device_vector<uint8_t> memoryTmp; //for gaussian blur
+    std::vector<ImageView<float>> tmpImages;
+#endif
     int numOctaves;
 };

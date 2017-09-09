@@ -125,10 +125,10 @@ SIFTGPU::SIFTGPU(int imageWidth, int imageHeight, bool doubleScale, int maxOctav
 
 SIFTGPU::~SIFTGPU(){
 
-    CHECK_CUDA_ERROR(cudaFree(memorydogpyramid));
-    CHECK_CUDA_ERROR(cudaFree(memorygpyramid));
-    memorydogpyramid = 0;
-    memorygpyramid = 0;
+    //    CHECK_CUDA_ERROR(cudaFree(memorydogpyramid));
+    //    CHECK_CUDA_ERROR(cudaFree(memorygpyramid));
+    //    memorydogpyramid = 0;
+    //    memorygpyramid = 0;
 }
 
 void SIFTGPU::initMemory()
@@ -139,7 +139,10 @@ void SIFTGPU::initMemory()
     Saiga::CUDA::CudaScopedTimerPrint tim("SIFTGPU::initMemory");
 #endif
 
+    gaussianPyramid2.resize(numOctaves * (nOctaveLayers + 3));
+    dogPyramid2.resize(numOctaves * (nOctaveLayers + 2));
 
+    pointCounter.resize(1);
 
 #ifdef SIFT_DEBUG
     std::cout << " ==== ExtractSift nOctaves=" << numOctaves << " octave layers: " << nOctaveLayers << std::endl;
@@ -148,52 +151,63 @@ void SIFTGPU::initMemory()
     int height = imageHeight*(doubleScale ? 2 : 1);
 
     //size of the gaussian pyramid in float
-    size_t pyramidSize = 0;
+    size_t gpyramidSize = 0;
+    size_t dpyramidSize = 0;
+    size_t tmpSize = 0;
+    //image row alignment
+    const int alignment = 256;
 
     for (int o=0, w = width, h = height; o<numOctaves; o++) {
-        int pw = Saiga::iAlignUp(w, 128);
-        size_t imageSize = h*pw;
-        pyramidSize += (nOctaveLayers + 3) * imageSize;
+        int pitch = Saiga::iAlignUp(w * sizeof(float), alignment);
+        size_t imageSize = h * pitch;
+        gpyramidSize += (nOctaveLayers + 3) * imageSize;
+        dpyramidSize += (nOctaveLayers + 2) * imageSize;
+        tmpSize += imageSize;
 #ifdef SIFT_DEBUG
-        cout << "Octave " << o << " - ImageSize: " << w << "x" << h << ", PaddedImageSize: " <<  pw << "x" << h  << ", MemoryPerImage: " << imageSize << ", MemoryPerOctave: " << imageSize*(nOctaveLayers + 3)  << endl;
+        cout << "Octave " << o << " - ImageSize: " << w << "x" << h << ", Pitch: " <<  pitch << "x" << h  << ", MemoryPerImage: " << imageSize << ", MemoryPerOctave: " << imageSize*(nOctaveLayers + 3)  << endl;
 #endif
         w /= 2;
         h /= 2;
     }
 
-    size_t pyramidSizeBytes = pyramidSize * sizeof(float);
-
 #ifdef SIFT_DEBUG
-    cout << "Memory for gaussian pyramid: " << pyramidSizeBytes << " ~ " << double(pyramidSizeBytes) / 1000.0 / 1000.0 << "mb" << endl;
+    cout << "Memory for dog+gaussian pyramid: " << (dpyramidSize+gpyramidSize) << " ~ " << double(dpyramidSize+gpyramidSize) / 1000.0 / 1000.0 << "mb" << endl;
 #endif
 
-    CHECK_CUDA_ERROR(cudaMalloc((void **)&memorydogpyramid, pyramidSizeBytes));
-    CHECK_CUDA_ERROR(cudaMalloc((void **)&memorygpyramid, pyramidSizeBytes));
+    memorygpyramid.resize(gpyramidSize);
+    memorydogpyramid.resize(dpyramidSize);
+#ifndef SIFT_SINGLE_PASS_BLUR
+    memoryTmp.resize(tmpSize);
+    tmpImages.resize(numOctaves);
+#endif
 
-
-    gaussianPyramid2.resize(numOctaves * (nOctaveLayers + 3));
-    dogPyramid2.resize(numOctaves * (nOctaveLayers + 2));
-
-    pointCounter.resize(1);
 
     size_t ps = 0;
     size_t dps = 0;
+    size_t tmps = 0;
     for (int o=0, w = width, h = height; o<numOctaves; o++) {
-
-        int pw = Saiga::iAlignUp(w, 128);
-        size_t imageSize = h*pw;
+        int pitch = Saiga::iAlignUp(w * sizeof(float), alignment);
+        size_t imageSize = h * pitch;
 
         for(int j = 0; j < nOctaveLayers + 3 ; ++j){
             int index = o * (nOctaveLayers + 3) + j;
-            gaussianPyramid2[index] = ImageView<float>(w,h,pw*sizeof(float),memorygpyramid+ps);
+            gaussianPyramid2[index] = ImageView<float>(w,h,pitch,
+                                                       thrust::raw_pointer_cast(memorygpyramid.data())+ps);
             ps += imageSize;
         }
 
         for(int j = 0; j < nOctaveLayers + 2 ; ++j){
             int index = o * (nOctaveLayers + 2) + j;
-            dogPyramid2[index] = ImageView<float>(w,h,pw*sizeof(float),memorydogpyramid+dps);
+            dogPyramid2[index] = ImageView<float>(w,h,pitch,
+                                                  thrust::raw_pointer_cast(memorydogpyramid.data())+dps);
             dps += imageSize;
         }
+
+#ifndef SIFT_SINGLE_PASS_BLUR
+        tmpImages[o] = ImageView<float>(w,h,pitch,
+                                        thrust::raw_pointer_cast(memoryTmp.data())+tmps);
+        tmps += imageSize;
+#endif
 
         w /= 2;
         h /= 2;

@@ -8,18 +8,17 @@
 #include "cuda/matching.h"
 #include "cuda/wrapper.h"
 #include "saiga/opencv/opencv.h"
+#include "saiga/time/performanceMeasure.h"
 
 
 void detectedKeypointsTest(){
     std::vector<std::string> imageFiles = {
-        "small.jpg",
-        "medium.jpg",
-        "big.jpg",
+        //        "small.jpg",
+        //        "medium.jpg",
+        //        "big.jpg",
         "landscape_small.jpg",
-        "landscape.jpg",
+        //        "landscape.jpg",
     };
-
-	int iterations = 50;
 
     for(auto str : imageFiles){
 
@@ -39,22 +38,16 @@ void detectedKeypointsTest(){
         thrust::device_vector<SiftPoint> keypoints(maxFeatures);
         thrust::device_vector<float> descriptors(maxFeatures * 128);
         int extractedPoints;
-        float time = 34544563456565;
-        {
-            
-			for (int i = 0; i < iterations; ++i) {
-				float t;
-				{
-					Saiga::CUDA::CudaScopedTimer timer(t);
-					extractedPoints = sift.compute(cimg, keypoints, descriptors);
-				}
-				//optimistic minimum timer :)
-				time = std::min(t, time);
-			}
-				
-        }
 
-        cout << "Extracted " << extractedPoints << " keypoints in " << time << "ms." << endl;
+
+        Saiga::measureObject<Saiga::CUDA::CudaScopedTimer>(
+                    "sift.compute",1, [&]()
+        {
+            extractedPoints = sift.compute(cimg, keypoints, descriptors);
+        });
+
+        //        cout << "Extracted " << extractedPoints << " keypoints in " << time << "ms." << endl;
+        cout << "Extracted " << extractedPoints << " keypoints." << endl;
 
         //copy to host
         std::vector<SiftPoint> hkeypoints(extractedPoints);
@@ -69,7 +62,7 @@ void detectedKeypointsTest(){
         img.convertTo(output,CV_8UC1);
         cv::drawKeypoints(output, cvkeypoints, output,cv::Scalar(0,255,0,0), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS );
 
-        cv::imwrite("data/"+str+".features.jpg",output);
+        cv::imwrite("out/"+str+".features.jpg",output);
         cout << endl;
 
     }
@@ -91,7 +84,7 @@ void matchTest(){
         "landscape_small.jpg",
         "landscape.jpg",
     };
-	int iterations = 50;
+    int iterations = 50;
 
     for(int i =0; i < imageFiles1.size() ; ++i){
 
@@ -104,8 +97,8 @@ void matchTest(){
 
         Saiga::CUDA::CudaImage<float> cimg2(img2.cols,img2.rows,Saiga::iAlignUp(img2.cols*sizeof(float),256));
         copyImage(Saiga::MatToImageView<float>(img2),cimg2,cudaMemcpyHostToDevice);
-//        Saiga::CUDA::CudaImage<float> cimg1(Saiga::MatToImageView<float>(img1));
-//        Saiga::CUDA::CudaImage<float> cimg2(Saiga::MatToImageView<float>(img2));
+        //        Saiga::CUDA::CudaImage<float> cimg1(Saiga::MatToImageView<float>(img1));
+        //        Saiga::CUDA::CudaImage<float> cimg2(Saiga::MatToImageView<float>(img2));
 
         int maxFeatures = 10000;
         SIFTGPU sift(cimg1.width,cimg1.height,false,-1,maxFeatures,3,0.04,10,1.6);
@@ -127,22 +120,34 @@ void matchTest(){
         int K = 4;
         thrust::device_vector<float> distances(extractedPoints1 * K);
         thrust::device_vector<int> indices(extractedPoints1 * K);
-		float time = 35453426436346;
-		{
-			for (int i = 0; i < iterations; ++i) {
-				float t;
-				{
-					Saiga::CUDA::CudaScopedTimer timer(t);
-					matcher.knnMatch(Saiga::array_view<float>(descriptors1).slice_n(0, extractedPoints1 * 128),
-						Saiga::array_view<float>(descriptors2).slice_n(0, extractedPoints2 * 128),
-						distances, indices, K
-					);
-				}
-				//optimistic minimum timer :)
-				time = std::min(t, time);
-			}
-        }
-		cout << "knnMatch finished in " << time  << "ms." << endl;
+        //		float time = 35453426436346;
+        //		{
+        //            for (int j = 0; j < iterations; ++j) {
+        //				float t;
+        //				{
+        //					Saiga::CUDA::CudaScopedTimer timer(t);
+        //					matcher.knnMatch(Saiga::array_view<float>(descriptors1).slice_n(0, extractedPoints1 * 128),
+        //						Saiga::array_view<float>(descriptors2).slice_n(0, extractedPoints2 * 128),
+        //						distances, indices, K
+        //					);
+        //				}
+        //				//optimistic minimum timer :)
+        //				time = std::min(t, time);
+        //			}
+        //        }
+
+
+        Saiga::measureObject<Saiga::CUDA::CudaScopedTimer>(
+                    "matcher.knnMatch",1, [&]()
+        {
+            matcher.knnMatch(Saiga::array_view<float>(descriptors1).slice_n(0, extractedPoints1 * 128),
+                             Saiga::array_view<float>(descriptors2).slice_n(0, extractedPoints2 * 128),
+                             distances, indices, K
+                             );
+        });
+
+
+        //		cout << "knnMatch finished in " << time  << "ms." << endl;
 
         //copy to host
         thrust::host_vector<float> hdistances = distances;
@@ -150,14 +155,14 @@ void matchTest(){
 
         std::vector<cv::DMatch> cvmatches;
         //apply ratio test and convert to cv::DMatch
-        for(int i = 0; i < extractedPoints1; ++i){
-            float d1 = hdistances[i*K+0];
-            float d2 = hdistances[i*K+1];
+        for(int j = 0; j < extractedPoints1; ++j){
+            float d1 = hdistances[j*K+0];
+            float d2 = hdistances[j*K+1];
             if(d1 < 0.7f * d2){
-                int id = hindices[i*K+0];
+                int id = hindices[j*K+0];
                 cv::DMatch m;
                 m.distance = d1;
-                m.queryIdx = i;
+                m.queryIdx = j;
                 m.trainIdx = id;
                 cvmatches.push_back(m);
             }
@@ -179,7 +184,7 @@ void matchTest(){
             //create debug match image
             cv::Mat outImg;
             cv::drawMatches(img1,cvkeypoints1,img2,cvkeypoints2,cvmatches,outImg,cv::Scalar(0,0,255),cv::Scalar(0,255,0),std::vector<char>(),cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
-            cv::imwrite("data/matches_"+imageFiles1[i]+"_"+imageFiles2[i]+".jpg",outImg);
+            cv::imwrite("out/matches_"+imageFiles1[i]+"_"+imageFiles2[i]+".jpg",outImg);
         }
 
         cout << endl;

@@ -120,7 +120,8 @@ void SIFTGPU::buildGaussianPyramid(){
 #endif
 
 
-    for(int o = 0; o < numOctaves; ++o){
+    for(int o = 0; o < numOctaves; ++o)
+    {
         for( int i = 0; i < nOctaveLayers + 3; i++ )
         {
             auto& dst = gaussianPyramid2[ o * (nOctaveLayers + 3) + i];
@@ -134,7 +135,17 @@ void SIFTGPU::buildGaussianPyramid(){
                 //Note: this takes up all the time.
                 //75% of the time already in the first octave
                 auto& src = gaussianPyramid2[ o * (nOctaveLayers + 3) + (i-1)];
+#ifdef SIFT_SINGLE_PASS_BLUR
                 Saiga::CUDA::applyFilterSeparateSinglePass(src,dst,octaveBlurKernels[i]);
+#else
+                //use single pass filter for small images
+                if(src.width > 200){
+                    auto& tmp = tmpImages[o];
+                    Saiga::CUDA::applyFilterSeparate(src,dst,tmp,octaveBlurKernels[i],octaveBlurKernels[i]);
+                }else{
+                    Saiga::CUDA::applyFilterSeparateSinglePass(src,dst,octaveBlurKernels[i]);
+                }
+#endif
             }
         }
     }
