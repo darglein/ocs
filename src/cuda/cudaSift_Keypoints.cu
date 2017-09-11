@@ -162,11 +162,10 @@ int x_tile, int y_tile){
         int ly = y + dy;
         int lz = layer + dz;
 
-        float v = (lx >= 0 && lx < TILE_W && ly >= 0 && ly < TILE_H && lz >= 0 && lz < LAYERS + 2) ?
+        float v = (lx >= 0 && lx < TILE_W && ly >= 0 && ly < TILE_H) ?
                 sbuffer[lz][ly][lx] :
                 images[lz](lx + x_tile, ly + y_tile);
         buffer[dx+1][dy+1][dz+1] = v;
-
     }
 }
 
@@ -527,6 +526,7 @@ void d_FindPointsMulti3(
 
 template<unsigned int TILE_W, unsigned int TILE_H, unsigned int LAYERS>
 __global__ static
+__launch_bounds__(TILE_W*TILE_H,3)
 void d_FindPointsMulti4(
         Saiga::ImageArrayView<float> images,
         Saiga::array_view<SiftPoint> d_Sift,
@@ -662,12 +662,12 @@ void d_FindPointsMulti4(
             }
 
             //reload buffer
-//            loadBuffer(images,buffer[bufferOffset],x,y,layer);
 
 
             lx = x - x_tile;
             ly = y - y_tile;
 
+            loadBuffer(images,buffer[bufferOffset],x,y,layer);
             loadBufferSharedMixed<TILE_W,TILE_H,LAYERS>(images,sbuffer,buffer[bufferOffset],lx,ly,layer,x_tile,y_tile);
         }
 
@@ -735,7 +735,7 @@ void SIFTGPU::FindPointsMulti(Saiga::array_view<SiftPoint> keypoints, Saiga::Ima
     int threshold = Saiga::iFloor(0.5 * contrastThreshold / nOctaveLayers * 255 * SIFT_FIXPT_SCALE);
 
 
-
+#if 1
     {
         Saiga::CUDA::CudaScopedTimerPrint tim("SIFTGPU::FindPointsMulti1");
         const int BLOCK_SIZE = 128;
@@ -748,9 +748,10 @@ void SIFTGPU::FindPointsMulti(Saiga::array_view<SiftPoint> keypoints, Saiga::Ima
                                                                            contrastThreshold,edgeThreshold,o,nOctaveLayers,sigma,nfeatures,threshold);
     }
 
-
+//    return;
 
     thrust::fill(pointCounter.begin(),pointCounter.end(),0);
+#endif
     {
         Saiga::CUDA::CudaScopedTimerPrint tim("SIFTGPU::FindPointsMulti2");
         const int TILE_W = 32;
@@ -768,6 +769,7 @@ void SIFTGPU::FindPointsMulti(Saiga::array_view<SiftPoint> keypoints, Saiga::Ima
                                                                      thrust::raw_pointer_cast(pointCounter.data()),
                                                                      contrastThreshold,edgeThreshold,o,nOctaveLayers,sigma,nfeatures,threshold);
     }
+    exit(0);
 
 
     CUDA_SYNC_CHECK_ERROR();
