@@ -192,8 +192,8 @@ int SIFTGPU::findScaleSpaceExtrema(Saiga::array_view<SiftPoint> keypoints, Saiga
 
     int n = 0;
 
-    for(int o = 0; o < numOctaves;++o){
-//    for(int o = 0; o < 1;++o){
+//    for(int o = 0; o < numOctaves;++o){
+    for(int o = 0; o < 1;++o){
 
 
         n = pointCounter[0];
