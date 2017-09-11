@@ -27,7 +27,7 @@ The following SIFT settings were used for the tests:
 * sigma = 1.6
 * maxDescriptorRadius = 16
 
-All timings are given in milli seconds (ms).
+All timings are given in milliseconds (ms).
 
 | Image Size  |      640x480      | 1280x720 | 1920x1080 | 3000x1688 | 4096x2304 | 
 | --- | --- | --- | --- |--- |--- |
