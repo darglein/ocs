@@ -21,7 +21,7 @@ set(CMAKE_BUILD_TYPE relwithdebinfo)
 set (PROGRAM_VERSION_MAJOR 1)
 set (PROGRAM_VERSION_MINOR 0)
 
-
+option (CUDA_DEBUG "enables CUDA_SYNC_CHECK_ERROR and CUDA_ASSERT" OFF) 
 
 ############# Required LIBRARIES ###############
 

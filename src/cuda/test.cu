@@ -13,11 +13,11 @@
 
 void detectedKeypointsTest(){
     std::vector<std::string> imageFiles = {
-        //        "small.jpg",
-        //        "medium.jpg",
-        //        "big.jpg",
+                "small.jpg",
+                "medium.jpg",
+                "big.jpg",
         "landscape_small.jpg",
-        //        "landscape.jpg",
+                "landscape.jpg",
     };
 
     for(auto str : imageFiles){
@@ -41,7 +41,7 @@ void detectedKeypointsTest(){
 
 
         Saiga::measureObject<Saiga::CUDA::CudaScopedTimer>(
-                    "sift.compute",1, [&]()
+                    "sift.compute",50, [&]()
         {
             extractedPoints = sift.compute(cimg, keypoints, descriptors);
         });
@@ -50,7 +50,7 @@ void detectedKeypointsTest(){
         cout << "Extracted " << extractedPoints << " keypoints." << endl;
 
         //copy to host
-        std::vector<SiftPoint> hkeypoints(extractedPoints);
+        thrust::host_vector<SiftPoint> hkeypoints(extractedPoints);
         thrust::copy(keypoints.begin(),keypoints.begin()+extractedPoints,hkeypoints.begin());
 
         //convert to cvkeypoints

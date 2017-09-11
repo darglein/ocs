@@ -254,11 +254,10 @@ __global__ void ComputeOrientationWarp(
 
     float mag_thr = (float)(omax * SIFT_ORI_PEAK_RATIO);
 
-
     int& outPoints = outPointsa[ti.warp_lane];
-
     if(ti.lane_id == 0)
         outPoints = 0;
+
 
 
 //    for( int j = ti.lane_id; j < n; j+=WARP_SIZE )
@@ -294,7 +293,15 @@ __global__ void ComputeOrientationWarp(
         }
     }
 
-    CUDA_ASSERT(outPoints > 0);
+	if (ti.lane_id == 0 && outPoints == 0)
+	{
+		sp.orientation = 0;
+	}
+
+#ifdef CUDA_DEBUG
+	//__syncthreads();
+    //CUDA_ASSERT(outPoints > 0);
+#endif
 }
 
 
@@ -305,10 +312,12 @@ void SIFTGPU::ComputeOrientationMulti(Saiga::array_view<SiftPoint> keypoints, Sa
     Saiga::CUDA::CudaScopedTimerPrint tim("  SIFTGPU::ComputeOrientationMulti");
 #endif
     const int BLOCK_SIZE = 128;
+	//cout << start << " " << length << endl;
     ComputeOrientationWarp<BLOCK_SIZE,SIFT_ORI_MAX_RADIUS><<<Saiga::iDivUp(length*WARP_SIZE, BLOCK_SIZE),BLOCK_SIZE>>>(images,
                                                                                                                        keypoints,
                                                                                                                        thrust::raw_pointer_cast(pointCounter.data()),
                                                                                                                        start,length,nOctaveLayers,
                                                                                                                        sigma,nfeatures);
     CUDA_SYNC_CHECK_ERROR();
+	
 }

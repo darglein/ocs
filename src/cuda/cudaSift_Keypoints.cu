@@ -117,6 +117,50 @@ using std::cout;
 using std::endl;
 
 
+HD inline
+void solveSymmetric(
+float a, float b, float c, float d, float e, float f,
+float h, float j, float k,
+float& x, float& y, float& z
+)
+{
+
+	float ad = a*d;
+	float ae = a*e;
+	float af = a*f;
+
+	float bc = b*c;
+	float be = b*e;
+	float bf = b*f;
+	float bb = b*b;
+
+	float cd = c*d;
+	float ce = c*e;
+	float cc = c*c;
+
+	float df = d*f;
+
+	float ee = e*e;
+
+
+	float div = -ad*f + ae*e + b*bf - 2 * bc*e + c*cd;
+	div = 1.0f / div;
+
+
+	float becd = (-be + cd);
+	float bfce = (bf - ce);
+	float aebc = (ae - bc);
+
+	x = k*becd + j*bfce + h*(-df + ee);
+	y = k*aebc + j*(-af + cc) + h*bfce;
+	z = k*(-ad + bb) + j*aebc + h*becd;
+
+
+	x *= div;
+	y *= div;
+	z *= div;
+}
+
 __device__ inline
 void loadBuffer(Saiga::ImageArrayView<float>& images, float buffer[3][3][3], int x, int y, int layer){
 #pragma unroll
@@ -529,9 +573,9 @@ __global__ static
 __launch_bounds__(TILE_W*TILE_H,3)
 void d_FindPointsMulti4(
         Saiga::ImageArrayView<float> images,
-        Saiga::array_view<SiftPoint> d_Sift,
+        Saiga::array_view<SiftPoint> keypoints,
         unsigned int* pointCounter,
-        float contrastThreshold, float edgeThreshold, int octave, int layers, float sigma, int maxFeatures, int threshold)
+        float contrastThreshold, float edgeThreshold, int octave, float sigma, int maxFeatures, int threshold)
 {
 
 
@@ -612,27 +656,41 @@ void d_FindPointsMulti4(
             float derivs2[6]; //xx,yy,ss,xy,xs,ys
             deriveSecond(buffer[bufferOffset],derivs2);
 
-            float H2[6] = {
-                derivs2[0],
-                derivs2[3],derivs2[1],
-                derivs2[4],derivs2[5],derivs2[2]
-            };
+        
 
-            // | H[0] H[1] H[3] |
-            // | H[1] H[2] H[4] |
-            // | H[3] H[4] H[5] |
-            float H[6];
-
-            Saiga::CUDA::inverse3x3Symmetric<float>(H2,H);
+  
 
 
             float3 dD;
             derive(buffer[bufferOffset],dD);
 
+#if 0
+			float H2[6] = {
+				derivs2[0],
+				derivs2[3],derivs2[1],
+				derivs2[4],derivs2[5],derivs2[2]
+			};
+
+			// | H[0] H[1] H[3] |
+			// | H[1] H[2] H[4] |
+			// | H[3] H[4] H[5] |
+			float H[6];
+			Saiga::CUDA::inverse3x3Symmetric<float>(H2, H);
+
             float3 X;
             X.x = H[0] * dD.x + H[1] * dD.y + H[3] * dD.z;
             X.y = H[1] * dD.x + H[2] * dD.y + H[4] * dD.z;
             X.z = H[3] * dD.x + H[4] * dD.y + H[5] * dD.z;
+#else
+			//direct analytical solution of the 3x3 linear system
+			//this is faster than the invert+multMV from above
+			float3 X;
+			solveSymmetric(
+				derivs2[0], derivs2[3], derivs2[4], derivs2[1], derivs2[5], derivs2[2],
+				dD.x, dD.y, dD.z,
+				X.x, X.y, X.z
+				);
+#endif
 
             xi = -X.z;
             xr = -X.y;
@@ -654,7 +712,7 @@ void d_FindPointsMulti4(
 
 
 
-            if( layer < 1 || layer > layers ||
+			if (layer < 1 || layer > LAYERS ||
                     x < SIFT_IMG_BORDER || x >= images.imgStart.width - SIFT_IMG_BORDER  ||
                     y < SIFT_IMG_BORDER || y >= images.imgStart.height - SIFT_IMG_BORDER ){
                 i = 1234124527;
@@ -685,7 +743,7 @@ void d_FindPointsMulti4(
 
             float t = xc * dD.x + xr * dD.y + xi * dD.z;
             contr = buffer[bufferOffset][1][1][1] * img_scale + t * 0.5f;
-            if( abs( contr ) * layers < contrastThreshold)
+            if( abs( contr ) * LAYERS < contrastThreshold)
                 continue;
         }
 
@@ -712,32 +770,62 @@ void d_FindPointsMulti4(
                 sp.xpos = (x + xc)  * (1 << octave);
                 sp.ypos = (y + xr)  * (1 << octave);
                 sp.packOctave(octave,layer);
-                sp.size = sigma * powf(2.f, float(layer + xi) / layers)*(1 << octave) * 2;
+				sp.size = sigma * powf(2.f, float(layer + xi) / LAYERS)*(1 << octave) * 2;
                 sp.response = abs(contr);
                 sp.orientation = 0;
-                                Saiga::CUDA::vectorCopy(&sp,d_Sift.data()+idx);
+				Saiga::CUDA::vectorCopy(&sp, keypoints.data() + idx);
             }else{
                 atomicDec(pointCounter, 0x7fffffff);
             }
 
     }
 }
+
+template<int OCTAVE_LAYERS>
+void findPointsCaller(
+	Saiga::ImageArrayView<float> images,
+	Saiga::array_view<SiftPoint> keypoints,
+	unsigned int* pointCounter,
+	float contrastThreshold, float edgeThreshold, int octave, int layers, float sigma, int maxFeatures, int threshold)
+{
+	int w = images[0].width;
+	int h = images[0].height;
+
+	const int TILE_W = 32;
+	const int TILE_H = 16;
+	//        const int TILE_D = 1;
+	const int RADIUS = 1;
+	dim3 blocks(
+		Saiga::iDivUp(w - 2 * SIFT_IMG_BORDER, TILE_W - 2 * RADIUS),
+		Saiga::iDivUp(h - 2 * SIFT_IMG_BORDER, TILE_H - 2 * RADIUS),
+		1
+		);
+	dim3 threads(TILE_W, TILE_H, 1);
+
+
+	d_FindPointsMulti4<TILE_W, TILE_H, OCTAVE_LAYERS> << <blocks, threads >> >(images,
+		keypoints,
+		pointCounter,
+		contrastThreshold, edgeThreshold, octave, sigma, maxFeatures, threshold);
+}
+
+
 void SIFTGPU::FindPointsMulti(Saiga::array_view<SiftPoint> keypoints, Saiga::ImageArrayView<float> images, int o){
 #ifdef SIFT_PRINT_TIMINGS
-//    Saiga::CUDA::CudaScopedTimerPrint tim("SIFTGPU::FindPointsMulti");
+    Saiga::CUDA::CudaScopedTimerPrint tim("SIFTGPU::FindPointsMulti");
 #endif
     int w = images[0].width;
     int h = images[0].height;
     int d = nOctaveLayers;
-    cout << "FindPointsMulti size: " << w << "x" << h << "x" << d << endl;
-    cout << "Number of inner pixels: " << w*h*d << endl;
+    //cout << "FindPointsMulti size: " << w << "x" << h << "x" << d << endl;
+    //cout << "Number of inner pixels: " << w*h*d << endl;
 
     int threshold = Saiga::iFloor(0.5 * contrastThreshold / nOctaveLayers * 255 * SIFT_FIXPT_SCALE);
 
 
-#if 1
+#if 0
     {
-        Saiga::CUDA::CudaScopedTimerPrint tim("SIFTGPU::FindPointsMulti1");
+       // Saiga::CUDA::CudaScopedTimerPrint tim("SIFTGPU::FindPointsMulti1");
         const int BLOCK_SIZE = 128;
         const int LOCAL_WARP_SIZE = 1;
         dim3 blocks(Saiga::iDivUp(w, BLOCK_SIZE / LOCAL_WARP_SIZE), h);
@@ -748,28 +836,28 @@ void SIFTGPU::FindPointsMulti(Saiga::array_view<SiftPoint> keypoints, Saiga::Ima
                                                                            contrastThreshold,edgeThreshold,o,nOctaveLayers,sigma,nfeatures,threshold);
     }
 
-//    return;
+    return;
 
     thrust::fill(pointCounter.begin(),pointCounter.end(),0);
 #endif
     {
-        Saiga::CUDA::CudaScopedTimerPrint tim("SIFTGPU::FindPointsMulti2");
-        const int TILE_W = 32;
-        const int TILE_H = 16;
-//        const int TILE_D = 1;
-        const int RADIUS = 1;
-        dim3 blocks(
-                    Saiga::iDivUp(w - 2 * SIFT_IMG_BORDER, TILE_W - 2 * RADIUS),
-                    Saiga::iDivUp(h - 2 * SIFT_IMG_BORDER, TILE_H - 2 * RADIUS),
-                    1
-                    );
-        dim3 threads(TILE_W,TILE_H,1);
-        d_FindPointsMulti4<TILE_W,TILE_H,3><<<blocks,threads>>>(images,
-                                                                     keypoints,
-                                                                     thrust::raw_pointer_cast(pointCounter.data()),
-                                                                     contrastThreshold,edgeThreshold,o,nOctaveLayers,sigma,nfeatures,threshold);
+		using FindKeypointsFunctionType = std::function<void(Saiga::ImageArrayView<float>, Saiga::array_view<SiftPoint>, unsigned int*, float, float, int octave, int, float, int, int)>;
+		FindKeypointsFunctionType f[6] = {
+			findPointsCaller<1>,
+			findPointsCaller<2>,
+			findPointsCaller<3>,
+			findPointsCaller<4>,
+			findPointsCaller<5>,
+			findPointsCaller<6>,
+		};
+
+		f[nOctaveLayers - 1](images,
+			keypoints,
+			thrust::raw_pointer_cast(pointCounter.data()),
+			contrastThreshold, edgeThreshold, o, nOctaveLayers, sigma, nfeatures, threshold);
     }
-    exit(0);
+
+//	exit(0);
 
 
     CUDA_SYNC_CHECK_ERROR();

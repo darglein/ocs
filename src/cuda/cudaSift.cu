@@ -133,6 +133,7 @@ static void scaleDownKeypoints(Saiga::array_view<SiftPoint> keypoints){
     const int BLOCK_SIZE = 128;
     int numblocks = Saiga::iDivUp(keypoints.size(),BLOCK_SIZE);
     d_scaleDownKeypoints<<<numblocks,BLOCK_SIZE>>>(keypoints);
+	CUDA_SYNC_CHECK_ERROR();
 }
 
 
@@ -178,6 +179,8 @@ void SIFTGPU::createInitialImage(ImageView<float> src, ImageView<float> dst, Ima
         cv::imwrite("out/init_sift_img_blurred_gpu.jpg",cpumat);
     }
 #endif
+	CUDA_SYNC_CHECK_ERROR();
+
 }
 
 
@@ -187,9 +190,8 @@ int SIFTGPU::findScaleSpaceExtrema(Saiga::array_view<SiftPoint> keypoints, Saiga
     Saiga::CUDA::CudaScopedTimerPrint tim("SIFTGPU extrema detection + descriptors");
 #endif
 
-
     thrust::fill(pointCounter.begin(),pointCounter.end(),0);
-
+	CUDA_SYNC_CHECK_ERROR();
     int n = 0;
 
     for(int o = 0; o < numOctaves;++o){
@@ -206,6 +208,7 @@ int SIFTGPU::findScaleSpaceExtrema(Saiga::array_view<SiftPoint> keypoints, Saiga
         n = pointCounter[0];
 
         int newPoints = n - pointsBefore;
+		SAIGA_ASSERT(newPoints >= 0);
 
         if(newPoints > 0){
             auto img2 = Saiga::ImageArrayView<float>(gaussianPyramid2[o*(nOctaveLayers + 3)], nOctaveLayers + 3);
@@ -220,6 +223,7 @@ int SIFTGPU::findScaleSpaceExtrema(Saiga::array_view<SiftPoint> keypoints, Saiga
     }
 
     n = pointCounter[0];
+	CUDA_SYNC_CHECK_ERROR();
     return n;
 }
 

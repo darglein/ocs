@@ -113,7 +113,7 @@
 /******************************* Defs and macros (different from OpenCV) *****************************/
 
 //#define SIFT_DEBUG
-#define SIFT_PRINT_TIMINGS
+//#define SIFT_PRINT_TIMINGS
 #define SIFT_SINGLE_PASS_BLUR
 
 #define SIFT_DESCRIPTOR_SIZE 128
