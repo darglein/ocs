@@ -145,6 +145,32 @@ void loadBufferShared(float sbuffer[LAYERS + 2][TILE_H][TILE_W], float buffer[3]
 }
 
 
+template<unsigned int TILE_W, unsigned int TILE_H, unsigned int LAYERS>
+__device__ inline
+void loadBufferSharedMixed(
+        Saiga::ImageArrayView<float>& images,
+        float sbuffer[LAYERS + 2][TILE_H][TILE_W],
+float buffer[3][3][3], int x, int y, int layer,
+int x_tile, int y_tile){
+#pragma unroll
+    for(int i = 0; i < 3 * 3 * 3; ++i){
+        int dx = i % 3 - 1;
+        int dy = i / 3 % 3 - 1;
+        int dz = i / 3 / 3 % 3 - 1;
+
+        int lx = x + dx;
+        int ly = y + dy;
+        int lz = layer + dz;
+
+        float v = (lx >= 0 && lx < TILE_W && ly >= 0 && ly < TILE_H && lz >= 0 && lz < LAYERS + 2) ?
+                sbuffer[lz][ly][lx] :
+                images[lz](lx + x_tile, ly + y_tile);
+        buffer[dx+1][dy+1][dz+1] = v;
+
+    }
+}
+
+
 __device__ inline
 void findMinMax(float buffer[3][3][3], float& minN, float& maxN){
     minN = 1253453453;
@@ -518,8 +544,8 @@ void d_FindPointsMulti4(
     const unsigned int t =  ty * TILE_W + tx;
 
     const int RADIUS = 1;
-    int x_tile = blockIdx.x * (TILE_W - 2 * RADIUS) - RADIUS;
-    int y_tile = blockIdx.y * (TILE_H - 2 * RADIUS) - RADIUS;
+    int x_tile = blockIdx.x * (TILE_W - 2 * RADIUS) - RADIUS + SIFT_IMG_BORDER;
+    int y_tile = blockIdx.y * (TILE_H - 2 * RADIUS) - RADIUS + SIFT_IMG_BORDER;
 
     int xo = x_tile + tx;
     int yo = y_tile + ty;
@@ -579,6 +605,78 @@ void d_FindPointsMulti4(
         float xi=0, xr=0, xc=0, contr=0;
         int i = 0;
 
+#ifdef SIFT_DO_SUBPIXEL_INTERPOLATION
+        for( ; i < SIFT_MAX_INTERP_STEPS; i++ )
+        {
+
+            float derivs2[6]; //xx,yy,ss,xy,xs,ys
+            deriveSecond(buffer[bufferOffset],derivs2);
+
+            float H2[6] = {
+                derivs2[0],
+                derivs2[3],derivs2[1],
+                derivs2[4],derivs2[5],derivs2[2]
+            };
+
+            // | H[0] H[1] H[3] |
+            // | H[1] H[2] H[4] |
+            // | H[3] H[4] H[5] |
+            float H[6];
+
+            Saiga::CUDA::inverse3x3Symmetric<float>(H2,H);
+
+
+            float3 dD;
+            derive(buffer[bufferOffset],dD);
+
+            float3 X;
+            X.x = H[0] * dD.x + H[1] * dD.y + H[3] * dD.z;
+            X.y = H[1] * dD.x + H[2] * dD.y + H[4] * dD.z;
+            X.z = H[3] * dD.x + H[4] * dD.y + H[5] * dD.z;
+
+            xi = -X.z;
+            xr = -X.y;
+            xc = -X.x;
+
+            if( abs(xi) < 0.5f && abs(xr) < 0.5f && abs(xc) < 0.5f )
+                break;
+
+            if( abs(xi) > (float)(INT_MAX/3) ||
+                    abs(xr) > (float)(INT_MAX/3) ||
+                    abs(xc) > (float)(INT_MAX/3) ){
+                i = 110000;
+                break;
+            }
+
+            x += Saiga::iRound(xc);
+            y += Saiga::iRound(xr);
+            layer += Saiga::iRound(xi);
+
+
+
+            if( layer < 1 || layer > layers ||
+                    x < SIFT_IMG_BORDER || x >= images.imgStart.width - SIFT_IMG_BORDER  ||
+                    y < SIFT_IMG_BORDER || y >= images.imgStart.height - SIFT_IMG_BORDER ){
+                i = 1234124527;
+                break;
+            }
+
+            //reload buffer
+//            loadBuffer(images,buffer[bufferOffset],x,y,layer);
+
+
+            lx = x - x_tile;
+            ly = y - y_tile;
+
+            loadBufferSharedMixed<TILE_W,TILE_H,LAYERS>(images,sbuffer,buffer[bufferOffset],lx,ly,layer,x_tile,y_tile);
+        }
+
+        // ensure convergence of interpolation
+        if( i >= SIFT_MAX_INTERP_STEPS ){
+            continue;
+        }
+
+#endif
         {
             float3 dD;
             derive(buffer[bufferOffset],dD);
@@ -651,6 +749,7 @@ void SIFTGPU::FindPointsMulti(Saiga::array_view<SiftPoint> keypoints, Saiga::Ima
     }
 
 
+
     thrust::fill(pointCounter.begin(),pointCounter.end(),0);
     {
         Saiga::CUDA::CudaScopedTimerPrint tim("SIFTGPU::FindPointsMulti2");
@@ -659,8 +758,8 @@ void SIFTGPU::FindPointsMulti(Saiga::array_view<SiftPoint> keypoints, Saiga::Ima
 //        const int TILE_D = 1;
         const int RADIUS = 1;
         dim3 blocks(
-                    Saiga::iDivUp(w, TILE_W - 2 * RADIUS),
-                    Saiga::iDivUp(h, TILE_H - 2 * RADIUS),
+                    Saiga::iDivUp(w - 2 * SIFT_IMG_BORDER, TILE_W - 2 * RADIUS),
+                    Saiga::iDivUp(h - 2 * SIFT_IMG_BORDER, TILE_H - 2 * RADIUS),
                     1
                     );
         dim3 threads(TILE_W,TILE_H,1);
