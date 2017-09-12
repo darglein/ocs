@@ -53,7 +53,6 @@ Time in (ms) for a knn search with k=4. The match size gives the number of keypo
 ## TODO
 
  * Remove Saiga dependency by copying the required files.
- * Increase keypoint detection performance
 
 ## License
 
