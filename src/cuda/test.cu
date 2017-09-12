@@ -13,11 +13,11 @@
 
 void detectedKeypointsTest(){
     std::vector<std::string> imageFiles = {
-                "small.jpg",
-                "medium.jpg",
-                "big.jpg",
+        "small.jpg",
+        "medium.jpg",
+        "big.jpg",
         "landscape_small.jpg",
-                "landscape.jpg",
+        "landscape.jpg",
     };
 
     for(auto str : imageFiles){

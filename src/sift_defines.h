@@ -119,13 +119,13 @@
 #define SIFT_DESCRIPTOR_SIZE 128
 #define SIFT_DO_SUBPIXEL_INTERPOLATION
 
-// maximum sample radius in gradient image
+// maximum sample radius in gradient image for orientatin assignment
 static const int SIFT_ORI_MAX_RADIUS = 32;
-// maximum sample radius in gradient image
+// maximum sample radius in gradient image for descriptor computation
 static const int SIFT_DESCR_MAX_RADIUS = 16;
 
-static const int GAUSSIAN_KERNEL_SIZE = 9;
 static const int GAUSSIAN_KERNEL_RADIUS = 4;
+static const int GAUSSIAN_KERNEL_SIZE = (2 * GAUSSIAN_KERNEL_RADIUS + 1);
 
 
 /******************************* Defs and macros *****************************/

@@ -118,21 +118,19 @@ using Saiga::ImageView;
 
 //size = 8 * sizeof(int) = 32 bytes
 struct GLM_ALIGN(32) SiftPoint {
+
+    //output position with subpixel accuracy
     float xpos;
     float ypos;
     //local pixel position in the current octave
     int ixpos;
     int iypos;
 
+    //see cv::Keypoint for more details
     int octave;
     float size;
-
-
     float orientation;
-
     float response;
-//    float empty[1];
-
 
     HD inline
     void unpackOctave(int& octave, int& layer, float& scale)
