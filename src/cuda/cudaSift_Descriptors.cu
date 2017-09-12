@@ -366,7 +366,7 @@ __global__ void calcSIFTDescriptorsBlock(
 
 
     float angle = 360.0f - sp.orientation;
-    if(std::abs(angle - 360.f) < FLT_EPSILON)
+    if(fabsf(angle - 360.f) < FLT_EPSILON)
         angle = 0.f;
 
 

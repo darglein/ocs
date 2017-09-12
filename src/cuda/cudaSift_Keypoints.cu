@@ -309,7 +309,7 @@ void d_FindPointsMulti2(
         float& val = buffer[bufferOffset][1][1][1];
         val = images[layer](x,y);
 
-        if(abs(val) < threshold){
+        if(fabsf(val) < threshold){
             continue;
         }
 
@@ -360,12 +360,12 @@ void d_FindPointsMulti2(
             xr = -X.y;
             xc = -X.x;
 
-            if( abs(xi) < 0.5f && abs(xr) < 0.5f && abs(xc) < 0.5f )
+            if( fabsf(xi) < 0.5f && fabsf(xr) < 0.5f && fabsf(xc) < 0.5f )
                 break;
 
-            if( abs(xi) > (float)(INT_MAX/3) ||
-                    abs(xr) > (float)(INT_MAX/3) ||
-                    abs(xc) > (float)(INT_MAX/3) ){
+            if( fabsf(xi) > (float)(INT_MAX/3) ||
+                    fabsf(xr) > (float)(INT_MAX/3) ||
+                    fabsf(xc) > (float)(INT_MAX/3) ){
                 i = 110000;
                 break;
             }
@@ -401,7 +401,7 @@ void d_FindPointsMulti2(
 
             float t = xc * dD.x + xr * dD.y + xi * dD.z;
             contr = buffer[bufferOffset][1][1][1] * img_scale + t * 0.5f;
-            if( abs( contr ) * layers < contrastThreshold)
+            if( fabsf( contr ) * layers < contrastThreshold)
                 continue;
         }
 
@@ -430,7 +430,7 @@ void d_FindPointsMulti2(
                 sp.ypos = (y + xr)  * (1 << octave);
                 sp.packOctave(octave,layer);
                 sp.size = sigma * powf(2.f, float(layer + xi) / layers)*(1 << octave) * 2;
-                sp.response = abs(contr);
+                sp.response = fabsf(contr);
                 sp.orientation = 0;
                 //                Saiga::CUDA::vectorCopy(&sp,d_Sift.data()+idx);
             }else{
@@ -504,7 +504,7 @@ void d_FindPointsMulti3(
     float& val = buffer[bufferOffset][1][1][1];
     val = images[layer](x,y);
 
-    if(abs(val) < threshold){
+    if(fabsf(val) < threshold){
         return;
     }
 
@@ -529,7 +529,7 @@ void d_FindPointsMulti3(
 
         float t = xc * dD.x + xr * dD.y + xi * dD.z;
         contr = buffer[bufferOffset][1][1][1] * img_scale + t * 0.5f;
-        if( abs( contr ) * layers < contrastThreshold)
+        if( fabsf( contr ) * layers < contrastThreshold)
             return;
     }
 
@@ -557,7 +557,7 @@ void d_FindPointsMulti3(
             sp.ypos = (y + xr)  * (1 << octave);
             sp.packOctave(octave,layer);
             sp.size = sigma * powf(2.f, float(layer + xi) / layers)*(1 << octave) * 2;
-            sp.response = abs(contr);
+            sp.response = fabsf(contr);
             sp.orientation = 0;
             //                Saiga::CUDA::vectorCopy(&sp,d_Sift.data()+idx);
         }else{
@@ -632,7 +632,7 @@ void d_FindPointsMulti4(
 //        val = images[layer](x,y);
         val = sbuffer[layer][ly][lx];
 
-        if(abs(val) < threshold){
+        if(fabsf(val) < threshold){
             continue;
         }
 
@@ -692,12 +692,12 @@ void d_FindPointsMulti4(
             xr = -X.y;
             xc = -X.x;
 
-            if( abs(xi) < 0.5f && abs(xr) < 0.5f && abs(xc) < 0.5f )
+            if( fabsf(xi) < 0.5f && fabsf(xr) < 0.5f && fabsf(xc) < 0.5f )
                 break;
 
-            if( abs(xi) > (float)(INT_MAX/3) ||
-                    abs(xr) > (float)(INT_MAX/3) ||
-                    abs(xc) > (float)(INT_MAX/3) ){
+            if( fabsf(xi) > (float)(INT_MAX/3) ||
+                    fabsf(xr) > (float)(INT_MAX/3) ||
+                    fabsf(xc) > (float)(INT_MAX/3) ){
                 i = 110000;
                 break;
             }
@@ -737,7 +737,7 @@ void d_FindPointsMulti4(
 
             float t = xc * dD.x + xr * dD.y + xi * dD.z;
             contr = buffer[bufferOffset][1][1][1] * img_scale + t * 0.5f;
-            if( abs( contr ) * LAYERS < contrastThreshold)
+            if( fabsf( contr ) * LAYERS < contrastThreshold)
                 continue;
         }
 
@@ -765,7 +765,7 @@ void d_FindPointsMulti4(
                 sp.ypos = (y + xr)  * (1 << octave);
                 sp.packOctave(octave,layer);
 				sp.size = sigma * powf(2.f, float(layer + xi) / LAYERS)*(1 << octave) * 2;
-                sp.response = abs(contr);
+                sp.response = fabsf(contr);
                 sp.orientation = 0;
 				Saiga::CUDA::vectorCopy(&sp, keypoints.data() + idx);
             }else{

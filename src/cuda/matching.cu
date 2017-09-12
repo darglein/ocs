@@ -7,7 +7,6 @@
 #include "matching.h"
 #include "saiga/cuda/thread_info.h"
 #include "saiga/cuda/reduce.h"
-#include "saiga/cuda/tests/test_helper.h"
 #include "saiga/time/timer.h"
 
 
@@ -272,93 +271,6 @@ void kmin( Saiga::ImageView<float> distances, float* outData, int* outIndices)
     }
 
 
-}
-
-
-#include "thrust/sort.h"
-
-void nnTest(){
-
-    const int K = 4;
-
-    int w = 5000;
-    //    w = iAlignUp(w,16);
-    int pitch = Saiga::iAlignUp(w,16);
-    int h =  5000;
-
-    size_t readWrites = w * h * sizeof(float) + h * K * 2;
-
-    Saiga::CUDA::PerformanceTestHelper pth("nnTest", readWrites);
-
-
-    srand(235435);
-    //i want to find the K smallest elements
-    thrust::host_vector<float> hdata(pitch * h);
-    for(auto& f : hdata){
-        f = rand() % 100000;
-    }
-    thrust::device_vector<float> data =  hdata;
-    thrust::device_vector<float> result(K * h);
-    thrust::device_vector<int> resultIndices(K * h);
-    thrust::host_vector<float> ref(K * h);
-
-    {
-        float time;
-        thrust::host_vector<float> tmp = hdata;
-        {
-            Saiga::ScopedTimer<float> t(&time);
-            for(int i = 0; i < h; ++i){
-                auto start = tmp.begin() + (i * pitch);
-                thrust::sort(start,start + w);
-                thrust::copy(start,start + K,ref.begin() + i * K);
-            }
-        }
-        pth.addMeassurement("CPU sort",time);
-    }
-    {
-        thrust::device_vector<float> tmp = hdata;
-        float time;
-        {
-            Saiga::CUDA::CudaScopedTimer t(time);
-            for(int i = 0; i < h; ++i){
-                auto start = tmp.begin() + (i * pitch);
-                thrust::sort(start,start + w);
-                thrust::copy(start,start + K,result.begin() + i * K);
-            }
-        }
-        pth.addMeassurement("GPU sort",time);
-        SAIGA_ASSERT(result == ref);
-    }
-
-
-    {
-        result = thrust::device_vector<float> (K*h,42);
-        float time;
-        {
-            Saiga::CUDA::CudaScopedTimer t(time);
-            const int THREADS_PER_ROW = 32;
-            const int BLOCK_SIZE = 128;
-            int blocks = Saiga::iDivUp(h*THREADS_PER_ROW,BLOCK_SIZE);
-            //            kmin<BLOCK_SIZE,THREADS_PER_ROW,K><<<blocks,BLOCK_SIZE>>>(thrust::raw_pointer_cast(data.data()),
-            //                                                                      thrust::raw_pointer_cast(result.data()),
-            //                                                                      thrust::raw_pointer_cast(resultIndices.data()),
-            //                                                                      w,pitch,h
-            //                                                                      );
-        }
-        pth.addMeassurement("K reduce",time);
-
-        {
-            thrust::host_vector<float> tmp = result;
-            for(int i =0; i < tmp.size(); ++i){
-                //                std::cout << i << " " << tmp[i] << " " << ref[i] << std::endl;
-                if(tmp[i] != ref[i]){
-                    std::cout << i << " " << tmp[i] << " " << ref[i] << std::endl;
-                    SAIGA_ASSERT(0);
-                }
-            }
-        }
-        SAIGA_ASSERT(result == ref);
-    }
 }
 
 MatchGPU::MatchGPU(int nfeatures) : maxPoints(nfeatures){

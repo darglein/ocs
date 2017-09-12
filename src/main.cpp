@@ -5,16 +5,11 @@
  */
 
 #include <iostream>
-#include "saiga/cuda/cudaHelper.h"
 
 void detectedKeypointsTest();
 void matchTest();
 
-
 int main(int argc, char *argv[]) {
-
-	Saiga::CUDA::initCUDA();
-
     detectedKeypointsTest();
     matchTest();
     return 0;
