@@ -44,6 +44,25 @@ Time in (ms) for a knn search with k=4. The match size gives the number of keypo
 | GTX 1080 | 0.327 | 0.655 | 0.979 | 3.432 |10.947 |
 | GTX 970 | 0.708 | 1.396 | 2.095 | 7.976 |25.953 |
 
+## Usage
+
+```c++
+//load image and copy it to the device
+cv::Mat1f img1 = cv::imread("data/landscape.jpg",cv::IMREAD_GRAYSCALE);
+Saiga::CUDA::CudaImage<float> d_img(img.cols,img.rows,Saiga::iAlignUp(img.cols*sizeof(float),256));
+copyImage(Saiga::MatToImageView<float>(img),d_img,cudaMemcpyHostToDevice);
+
+//initialize sift and init memory. 
+int maxFeatures = 10000;
+SIFTGPU sift(d_img.width,d_img.height,false,-1,maxFeatures,3,0.04,10,1.6);
+sift.initMemory();
+
+//extract keypoints and descriptors on the gpu
+thrust::device_vector<SiftPoint> keypoints(maxFeatures);
+thrust::device_vector<float> descriptors(maxFeatures * 128);
+int extractedPoints = sift.compute(d_img, keypoints, descriptors)
+```
+
 ## Dependencies
 
  * [CUDA 8](https://developer.nvidia.com/cuda-downloads)
