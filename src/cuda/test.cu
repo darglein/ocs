@@ -120,25 +120,10 @@ void matchTest(){
         int K = 4;
         thrust::device_vector<float> distances(extractedPoints1 * K);
         thrust::device_vector<int> indices(extractedPoints1 * K);
-        //		float time = 35453426436346;
-        //		{
-        //            for (int j = 0; j < iterations; ++j) {
-        //				float t;
-        //				{
-        //					Saiga::CUDA::CudaScopedTimer timer(t);
-        //					matcher.knnMatch(Saiga::array_view<float>(descriptors1).slice_n(0, extractedPoints1 * 128),
-        //						Saiga::array_view<float>(descriptors2).slice_n(0, extractedPoints2 * 128),
-        //						distances, indices, K
-        //					);
-        //				}
-        //				//optimistic minimum timer :)
-        //				time = std::min(t, time);
-        //			}
-        //        }
 
 
         Saiga::measureObject<Saiga::CUDA::CudaScopedTimer>(
-                    "matcher.knnMatch",1, [&]()
+                    "matcher.knnMatch",50, [&]()
         {
             matcher.knnMatch(Saiga::array_view<float>(descriptors1).slice_n(0, extractedPoints1 * 128),
                              Saiga::array_view<float>(descriptors2).slice_n(0, extractedPoints2 * 128),

@@ -3,13 +3,6 @@ cmake_minimum_required(VERSION 2.8)
 set(PROG_NAME ocs)
 project (${PROG_NAME})
 
-set(MAIN_INCLUDE_DIR "" CACHE FILEPATH "Path to yourlib includes")
-set(CMAKE_INCLUDE_PATH ${CMAKE_INCLUDE_PATH} ${MAIN_INCLUDE_DIR}/include)
-set(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} ${MAIN_INCLUDE_DIR}/lib)
-include_directories(${MAIN_INCLUDE_DIR}/include)
-LINK_DIRECTORIES(${MAIN_INCLUDE_DIR}/lib)   
-
-
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH} )
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)

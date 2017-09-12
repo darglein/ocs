@@ -6,7 +6,6 @@
 
 #include <iostream>
 #include "saiga/cuda/cudaHelper.h"
-#include "saiga/cuda/tests/test.h"
 
 void detectedKeypointsTest();
 void matchTest();
@@ -15,10 +14,8 @@ void matchTest();
 int main(int argc, char *argv[]) {
 
 	Saiga::CUDA::initCUDA();
-	//Saiga::CUDA::testCuda();
-	//Saiga::CUDA::testThrust();
 
     detectedKeypointsTest();
-//    matchTest();
+    matchTest();
     return 0;
 }
