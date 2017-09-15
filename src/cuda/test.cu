@@ -92,10 +92,10 @@ void matchTest(){
         cv::Mat1f img1 = cv::imread("data/"+imageFiles1[i],cv::IMREAD_GRAYSCALE);
         cv::Mat1f img2 = cv::imread("data/"+imageFiles2[i],cv::IMREAD_GRAYSCALE);
 
-        Saiga::CUDA::CudaImage<float> cimg1(img1.cols,img1.rows,Saiga::iAlignUp(img1.cols*sizeof(float),256));
+        Saiga::CUDA::CudaImage<float> cimg1(img1.rows,img1.cols,Saiga::iAlignUp(img1.cols*sizeof(float),256));
         copyImage(Saiga::MatToImageView<float>(img1),cimg1,cudaMemcpyHostToDevice);
 
-        Saiga::CUDA::CudaImage<float> cimg2(img2.cols,img2.rows,Saiga::iAlignUp(img2.cols*sizeof(float),256));
+        Saiga::CUDA::CudaImage<float> cimg2(img2.rows,img2.cols,Saiga::iAlignUp(img2.cols*sizeof(float),256));
         copyImage(Saiga::MatToImageView<float>(img2),cimg2,cudaMemcpyHostToDevice);
         //        Saiga::CUDA::CudaImage<float> cimg1(Saiga::MatToImageView<float>(img1));
         //        Saiga::CUDA::CudaImage<float> cimg2(Saiga::MatToImageView<float>(img2));

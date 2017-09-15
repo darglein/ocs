@@ -193,20 +193,20 @@ void SIFTGPU::initMemory()
 
         for(int j = 0; j < nOctaveLayers + 3 ; ++j){
             int index = o * (nOctaveLayers + 3) + j;
-            gaussianPyramid2[index] = ImageView<float>(w,h,pitch,
+            gaussianPyramid2[index] = ImageView<float>(h,w,pitch,
                                                        thrust::raw_pointer_cast(memorygpyramid.data())+ps);
             ps += imageSize;
         }
 
         for(int j = 0; j < nOctaveLayers + 2 ; ++j){
             int index = o * (nOctaveLayers + 2) + j;
-            dogPyramid2[index] = ImageView<float>(w,h,pitch,
+            dogPyramid2[index] = ImageView<float>(h,w,pitch,
                                                   thrust::raw_pointer_cast(memorydogpyramid.data())+dps);
             dps += imageSize;
         }
 
 #ifndef SIFT_SINGLE_PASS_BLUR
-        tmpImages[o] = ImageView<float>(w,h,pitch,
+        tmpImages[o] = ImageView<float>(h,w,pitch,
                                         thrust::raw_pointer_cast(memoryTmp.data())+tmps);
         tmps += imageSize;
 #endif
