@@ -17,7 +17,7 @@
 #include "wrapper.h"
 
 
-
+namespace cudasift {
 namespace SiftWrapper{
 
 void KeypointsToCV(Saiga::array_view<SiftPoint> keypoints, std::vector<cv::KeyPoint>& cvkeypoints){
@@ -34,4 +34,5 @@ void KeypointsToCV(Saiga::array_view<SiftPoint> keypoints, std::vector<cv::KeyPo
     }
 }
 
+}
 }

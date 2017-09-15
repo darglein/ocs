@@ -116,7 +116,7 @@
 using std::cout;
 using std::endl;
 
-
+namespace cudasift {
 template<unsigned int THREADS_PER_BLOCK, int MAX_RADIUS>
 __device__ inline
 void calcSIFTDescriptorBlock( ImageView<float> d_img,
@@ -402,4 +402,6 @@ void SIFTGPU::descriptorsMulti(Saiga::array_view<SiftPoint> keypoints, Saiga::ar
                                                                                                                             start,length
                                                                                                                             );
     CUDA_SYNC_CHECK_ERROR();
+}
+
 }

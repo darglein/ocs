@@ -6,11 +6,13 @@
 
 #include <iostream>
 
+namespace cudasift {
 void detectedKeypointsTest();
 void matchTest();
+}
 
 int main(int argc, char *argv[]) {
-    detectedKeypointsTest();
-    matchTest();
+    cudasift::detectedKeypointsTest();
+    cudasift::matchTest();
     return 0;
 }

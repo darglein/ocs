@@ -110,6 +110,9 @@
 
 #include "saiga/cuda/common.h"
 
+namespace cudasift {
+
+
 /******************************* Defs and macros (different from OpenCV) *****************************/
 
 //#define SIFT_DEBUG
@@ -174,3 +177,5 @@ static const int SIFT_ORI_HIST_BINS = 36;
 typedef float sift_wt;
 static const int SIFT_FIXPT_SCALE = 1;
 
+
+}

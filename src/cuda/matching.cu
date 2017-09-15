@@ -9,6 +9,7 @@
 #include "saiga/cuda/reduce.h"
 #include "saiga/time/timer.h"
 
+namespace cudasift {
 
 template<unsigned int BLOCK_W2, unsigned int BLOCK_H, unsigned int LOCAL_WARP_W=1, unsigned int DESCRIPTOR_SIZE2=128>
 __global__ static
@@ -421,4 +422,6 @@ void MatchGPU::radiusMatch(Saiga::array_view<SiftPoint> keypoints1, Saiga::array
     computeKNN(out_distance,out_index,k);
 
     CUDA_SYNC_CHECK_ERROR();
+}
+
 }

@@ -116,6 +116,7 @@
 using std::cout;
 using std::endl;
 
+namespace cudasift {
 
 HD inline
 void solveSymmetric(
@@ -858,4 +859,6 @@ void SIFTGPU::FindPointsMulti(Saiga::array_view<SiftPoint> keypoints, Saiga::Ima
 
 
     CUDA_SYNC_CHECK_ERROR();
+}
+
 }

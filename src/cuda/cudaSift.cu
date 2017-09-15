@@ -112,7 +112,7 @@
 
 using std::cout;
 using std::endl;
-
+namespace cudasift {
 
 __global__
 void d_scaleDownKeypoints(Saiga::array_view<SiftPoint> keypoints)
@@ -227,3 +227,4 @@ int SIFTGPU::findScaleSpaceExtrema(Saiga::array_view<SiftPoint> keypoints, Saiga
     return n;
 }
 
+}

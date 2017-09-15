@@ -10,6 +10,7 @@
 #include "saiga/opencv/opencv.h"
 #include "saiga/time/performanceMeasure.h"
 
+namespace cudasift {
 
 void detectedKeypointsTest(){
     std::vector<std::string> imageFiles = {
@@ -177,3 +178,4 @@ void matchTest(){
 
 }
 
+}

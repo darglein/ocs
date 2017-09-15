@@ -11,10 +11,10 @@
 #include "saiga/cuda/imageProcessing/image.h"
 
 
-class SIFTGPU;
-
+namespace cudasift {
 namespace SiftWrapper{
 
 void KeypointsToCV(Saiga::array_view<SiftPoint> keypoints, std::vector<cv::KeyPoint> &cvkeypoints);
 
+}
 }

@@ -114,6 +114,9 @@
 using std::cout;
 using std::endl;
 
+namespace cudasift {
+
+
 // Computes a gradient orientation histogram at a specified pixel
 __device__
 static float calcOrientationHistWarp(  ImageView<float> d_img,
@@ -320,4 +323,6 @@ void SIFTGPU::ComputeOrientationMulti(Saiga::array_view<SiftPoint> keypoints, Sa
                                                                                                                        sigma,nfeatures);
     CUDA_SYNC_CHECK_ERROR();
 	
+}
+
 }

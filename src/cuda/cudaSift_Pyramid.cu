@@ -112,7 +112,7 @@
 using std::cout;
 using std::endl;
 
-
+namespace cudasift {
 
 void SIFTGPU::buildGaussianPyramid(){
 #ifdef SIFT_PRINT_TIMINGS
@@ -170,3 +170,4 @@ void SIFTGPU::buildDoGPyramid(){
     }
 }
 
+}

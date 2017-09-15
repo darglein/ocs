@@ -113,10 +113,12 @@
 using std::cout;
 using std::endl;
 
+namespace cudasift {
 SIFTGPU::SIFTGPU(int imageWidth, int imageHeight, bool doubleScale, int maxOctaves,
                  int _nfeatures, int _nOctaveLayers,
                  double _contrastThreshold, double _edgeThreshold, double _sigma )
-    : SIFTBase(imageWidth,imageHeight,doubleScale,_nfeatures,_nOctaveLayers,_contrastThreshold,_edgeThreshold,_sigma)
+    : imageWidth(imageWidth),imageHeight(imageHeight),doubleScale(doubleScale),
+      nfeatures(_nfeatures),nOctaveLayers(_nOctaveLayers),contrastThreshold(_contrastThreshold),edgeThreshold(_edgeThreshold),sigma(_sigma)
 {
     numOctaves =  Saiga::iRound(std::log( (double)std::min( imageWidth, imageHeight ) ) / std::log(2.) - 2) + 1;
     if(maxOctaves > 0)
@@ -252,3 +254,4 @@ void SIFTGPU::createKernels(){
 }
 
 
+}

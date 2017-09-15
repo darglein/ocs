@@ -111,26 +111,70 @@
 
 #include "saiga/cuda/cudaHelper.h"
 #include "saiga/cuda/imageProcessing/image.h"
-#include "sift_base.h"
+#include "saiga/cuda/common.h"
+#include "saiga/cuda/array_view.h"
+#include "saiga/cuda/imageProcessing/imageView.h"
+
+#include "sift_defines.h"
 
 #ifdef SIFT_DEBUG
 #include "saiga/opencv/opencv.h"
 #endif
 
-class SIFTGPU : public SIFTBase{
-public:
+namespace cudasift {
 
+
+
+
+using Saiga::ImageView;
+
+
+//size = 8 * sizeof(int) = 32 bytes
+struct GLM_ALIGN(32) SiftPoint {
+
+    //output position with subpixel accuracy
+    float xpos;
+    float ypos;
+    //local pixel position in the current octave
+    int ixpos;
+    int iypos;
+
+    //see cv::Keypoint for more details
+    int octave;
+    float size;
+    float orientation;
+    float response;
+
+    HD inline
+    void unpackOctave(int& octave, int& layer, float& scale)
+    {
+        octave = this->octave & 255;
+        layer = (this->octave >> 8) & 255;
+        octave = octave < 128 ? octave : (-128 | octave);
+        scale = octave >= 0 ? 1.f/(1 << octave) : (float)(1 << -octave);
+    }
+
+    HD inline
+    void packOctave(int octave, int layer){
+        this->octave = octave + (layer << 8);
+    }
+};
+
+
+
+class SIFTGPU{
+public:
     SIFTGPU(
             int imageWidth, int imageHeight, bool doubleScale, int maxOctaves,
             int nfeatures = 0, int nOctaveLayers = 3,
             double contrastThreshold = 0.04, double edgeThreshold = 10,
             double sigma = 1.6);
 
-    virtual ~SIFTGPU();
+    ~SIFTGPU();
 
-    virtual void initMemory() override;
-    virtual int compute(ImageView<float> img, Saiga::array_view<SiftPoint> keypoints, Saiga::array_view<float> descriptors) override;
-protected:
+    void initMemory();
+    int compute(ImageView<float> img, Saiga::array_view<SiftPoint> keypoints, Saiga::array_view<float> descriptors);
+private:
     void createKernels();
     void createInitialImage(ImageView<float> src, ImageView<float> dst, ImageView<float> tmp);
     void buildGaussianPyramid();
@@ -156,5 +200,19 @@ protected:
     thrust::device_vector<uint8_t> memoryTmp; //for gaussian blur
     std::vector<ImageView<float>> tmpImages;
 #endif
+
+
     int numOctaves;
+    int imageWidth;
+    int imageHeight;
+    bool doubleScale;
+    int nfeatures;
+    int nOctaveLayers;
+    double contrastThreshold;
+    double edgeThreshold;
+    double sigma;
+
+    bool initialized = false;
 };
+
+}

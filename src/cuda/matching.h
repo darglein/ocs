@@ -8,6 +8,7 @@
 
 #include "cuda/cudaSift.h"
 
+namespace cudasift {
 
 class MatchGPU{
 public:
@@ -39,3 +40,5 @@ private:
     void computeKNN(Saiga::array_view<float> out_distance, Saiga::array_view<int> out_index, int k);
     void filterByRadius(Saiga::array_view<SiftPoint> keypoints1, Saiga::array_view<SiftPoint> keypoints2, float r);
 };
+
+}
