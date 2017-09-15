@@ -108,9 +108,7 @@
 
 #include "cudaSift.h"
 
-#include "saiga/reduce.h"
 #include "saiga/device_helper.h"
-#include "saiga/memory.h"
 
 
 

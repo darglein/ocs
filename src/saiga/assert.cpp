@@ -4,7 +4,7 @@
  * See LICENSE file for more information.
  */
 
-#include "saiga/assert.h"
+#include "saiga/common.h"
 
 #include <csignal>
 #include <iostream>

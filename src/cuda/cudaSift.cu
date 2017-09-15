@@ -109,7 +109,6 @@
 
 #include "cudaSift.h"
 #include "saiga/filter.h"
-#include "saiga/scale.h"
 
 
 namespace cudasift {

@@ -109,8 +109,6 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 #include "cudaSift.h"
-#include "saiga/thread_info.h"
-#include "saiga/reduce.h"
 #include "saiga/device_helper.h"
 
 
@@ -315,7 +313,7 @@ void calcSIFTDescriptorBlock( ImageView<float> d_img,
 
 
 
-    nrm2 = SIFT_INT_DESCR_FCTR/max(sqrtf(nrm2), FLT_EPSILON);
+    nrm2 = SIFT_INT_DESCR_FCTR/max(sqrtf(nrm2), __FLT_EPSILON__);
 
     {
         dst[local_thread_id] = dst[local_thread_id]*nrm2;
@@ -365,7 +363,7 @@ __global__ void calcSIFTDescriptorsBlock(
 
 
     float angle = 360.0f - sp.orientation;
-    if(fabsf(angle - 360.f) < FLT_EPSILON)
+    if(fabsf(angle - 360.f) < __FLT_EPSILON__)
         angle = 0.f;
 
 

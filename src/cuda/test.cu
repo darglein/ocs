@@ -8,7 +8,6 @@
 #include "cuda/matching.h"
 #include "cuda/wrapper.h"
 #include "saiga/opencv.h"
-#include "saiga/performanceMeasure.h"
 
 namespace cudasift {
 

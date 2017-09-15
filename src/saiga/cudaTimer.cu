@@ -5,7 +5,7 @@
  */
 
 #include "saiga/cudaTimer.h"
-#include "saiga/assert.h"
+#include "saiga/common.h"
 
 namespace Saiga {
 namespace CUDA {

@@ -107,9 +107,7 @@
 \**********************************************************************************************/
 
 #include "cudaSift.h"
-#include "saiga/scale.h"
 #include "saiga/filter.h"
-#include "saiga/difference.h"
 
 
 

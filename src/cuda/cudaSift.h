@@ -108,7 +108,7 @@
 
 #pragma once
 
-#include "saiga/cudaHelper.h"
+#include "saiga/common.h"
 #include "saiga/image.h"
 
 #include "sift_defines.h"
@@ -129,7 +129,7 @@ using Saiga::ImageView;
 
 
 //size = 8 * sizeof(int) = 32 bytes
-struct GLM_ALIGN(32) SiftPoint {
+struct __attribute__((aligned(32))) SiftPoint {
 
     //output position with subpixel accuracy
     float xpos;
