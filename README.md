@@ -77,10 +77,6 @@ The important files of saiga are included in src/dep. If you have saiga installe
  
 For running the sample.
 
-## TODO
-
- * Remove Saiga dependency by copying the required files.
-
 ## License
 
 The OCS ocde is licensed under the MIT License, but you also have to comply with [OpenCV's license](https://github.com/opencv/opencv_contrib/blob/master/LICENSE). The SIFT algorithm itself is [patented](https://www.google.com/patents/US6711293) and not free for commercial use.
