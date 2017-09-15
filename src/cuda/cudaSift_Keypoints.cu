@@ -168,7 +168,7 @@ void loadBuffer(Saiga::ImageArrayView<float>& images, float buffer[3][3][3], int
         int dx = i % 3 - 1;
         int dy = i / 3 % 3 - 1;
         int dz = i / 3 / 3 % 3 - 1;
-        float v = images[layer+dz](x+dx,y+dy);
+        float v = images[layer+dz].atIVxxx(y+dy,x+dx);
         buffer[dx+1][dy+1][dz+1] = v;
 
     }
@@ -208,7 +208,7 @@ int x_tile, int y_tile){
 
         float v = (lx >= 0 && lx < TILE_W && ly >= 0 && ly < TILE_H) ?
                 sbuffer[lz][ly][lx] :
-                images[lz](lx + x_tile, ly + y_tile);
+                images[lz].atIVxxx( ly + y_tile,lx + x_tile);
         buffer[dx+1][dy+1][dz+1] = v;
     }
 }
@@ -268,6 +268,7 @@ void deriveSecond(float buffer[3][3][3], float derivs2[6]){
             buffer[1][2][0] + buffer[1][0][0] ) * cross_deriv_scale;
 }
 
+#if 0
 template<unsigned int THREADS_PER_BLOCK,unsigned int LOCAL_WARP_SIZE>
 __global__ static
 __launch_bounds__(THREADS_PER_BLOCK)
@@ -568,6 +569,8 @@ void d_FindPointsMulti3(
 
 }
 
+#endif
+
 template<unsigned int TILE_W, unsigned int TILE_H, unsigned int LAYERS>
 __global__ static
 __launch_bounds__(TILE_W*TILE_H,3)
@@ -595,7 +598,7 @@ void d_FindPointsMulti4(
     __shared__ float sbuffer[LAYERS + 2][TILE_H][TILE_W];
 
     for(int i = 0; i < LAYERS + 2; ++i){
-        sbuffer[i][ty][tx]  = images[i].clampedRead(xo,yo);
+        sbuffer[i][ty][tx]  = images[i].clampedRead7(yo,xo);
     }
 
     //only process inner pixels
@@ -807,9 +810,9 @@ void SIFTGPU::FindPointsMulti(Saiga::array_view<SiftPoint> keypoints, Saiga::Ima
 #ifdef SIFT_PRINT_TIMINGS
     Saiga::CUDA::CudaScopedTimerPrint tim("SIFTGPU::FindPointsMulti");
 #endif
-    int w = images[0].width;
-    int h = images[0].height;
-    int d = nOctaveLayers;
+//    int w = images[0].width;
+//    int h = images[0].height;
+//    int d = nOctaveLayers;
     //cout << "FindPointsMulti size: " << w << "x" << h << "x" << d << endl;
     //cout << "Number of inner pixels: " << w*h*d << endl;
 

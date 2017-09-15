@@ -76,7 +76,7 @@ void d_computeDistanceMatrix2(Saiga::ImageView<float> distances,
     sum = sqrtf(sum);
 
     if (lane == 0 && y<distances.height){
-        distances(x,y) = (x<distances.width? sum : 45647431.0f);
+        distances.atIVxxx(y,x) = (x<distances.width? sum : 45647431.0f);
     }
 }
 
@@ -200,7 +200,7 @@ void kmin( Saiga::ImageView<float> distances, float* outData, int* outIndices)
     //    data += y * pitch;    //for every element
     for (int i = ti.lane_id; i < distances.width; i += LOCAL_WARP_SIZE) {
         int newIdx = i;
-        float newval = distances(i,y);
+        float newval = distances.atIVxxx(y,i);
         //ignore all values that are larger than the largest value
         if (newval >= highestValue){
             continue;
@@ -387,7 +387,7 @@ void d_filterByRadius(Saiga::array_view<SiftPoint> keypoints1, Saiga::array_view
         float dy = pos2.y - pos.y;
         float d2 = dx * dx + dy * dy;
         if(d2 > r2){
-            distances(i,y) = 36464067;
+            distances.atIVxxx(y,i) = 36464067;
         }
     }
 }

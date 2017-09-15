@@ -184,7 +184,9 @@ void SIFTGPU::initMemory()
 
     size_t ps = 0;
     size_t dps = 0;
+#ifndef SIFT_SINGLE_PASS_BLUR
     size_t tmps = 0;
+#endif
     for (int o=0, w = width, h = height; o<numOctaves; o++) {
         int pitch = Saiga::iAlignUp(w * sizeof(float), alignment);
         size_t imageSize = h * pitch;
