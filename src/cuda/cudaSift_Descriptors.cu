@@ -179,8 +179,8 @@ void calcSIFTDescriptorBlock( ImageView<float> d_img,
         if( rbin > -1 && rbin < d && cbin > -1 && cbin < d &&
                 y > 0 && y < d_img.height - 1 && x > 0 && x < d_img.width - 1 )
         {
-            float dx = d_img.atIVxxx(y,x+1) - d_img.atIVxxx(y,x-1);
-            float dy = d_img.atIVxxx(y-1,x) - d_img.atIVxxx(y+1,x);
+            float dx = d_img(y,x+1) - d_img(y,x-1);
+            float dy = d_img(y-1,x) - d_img(y+1,x);
 
             float w = (c_rot * c_rot + r_rot * r_rot)*exp_scale;
             w = exp(w);

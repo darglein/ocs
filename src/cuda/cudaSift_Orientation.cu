@@ -150,8 +150,8 @@ static float calcOrientationHistWarp(  ImageView<float> d_img,
         if( y <= 0 || y >= d_img.height - 1 )
             continue;
 
-        float dx = d_img.atIVxxx(y,x+1) - d_img.atIVxxx(y,x-1);
-        float dy = d_img.atIVxxx(y-1,x) - d_img.atIVxxx(y+1,x);
+        float dx = d_img(y,x+1) - d_img(y,x-1);
+        float dy = d_img(y-1,x) - d_img(y+1,x);
 
         float w = (i*i + j*j)*expf_scale;
         w = expf(w);

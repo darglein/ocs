@@ -29,7 +29,7 @@ static void d_subtract(ImageView<float> src1, ImageView<float> src2, ImageView<f
 #pragma unroll
     for(int i = 0; i < ROWS_PER_THREAD; ++i, y += BLOCK_H){
         if(y < dst.height){
-            dst.atIVxxx(y,x) = src1.atIVxxx(y,x) - src2.atIVxxx(y,x);
+            dst(y,x) = src1(y,x) - src2(y,x);
         }
     }
 }
@@ -62,7 +62,7 @@ __global__ void d_subtractMulti(
 
     int height = dst.imgStart.height;
 
-    if(!src.imgStart.inImage7(ys,x))
+    if(!src.imgStart.inImage(ys,x))
         return;
 
     T lastVals[ROWS_PER_THREAD];
@@ -122,7 +122,7 @@ static void d_fill(ImageView<float> img, int h, float value)
     //process a fixed number of elements per thread to maximise instruction level parallelism
     for(int i = 0; i < ROWS_PER_THREAD; ++i, y+=h){
         if(y < img.height)
-            img.atIVxxx(y,x) = value;
+            img(y,x) = value;
     }
 }
 
@@ -154,7 +154,7 @@ static void d_scaleDown2EveryOther(ImageView<float> src, ImageView<float> dst, i
 #pragma unroll
     for(int i = 0; i < ROWS_PER_THREAD; ++i, y+=h){
         if(y < dst.height){
-            dst.atIVxxx(y,x) = src.atIVxxx(y*2,x*2);
+            dst(y,x) = src(y*2,x*2);
         }
     }
 
@@ -200,12 +200,12 @@ static void d_scaleUp2Linear(ImageView<float> src, ImageView<float> dst, int h, 
             //use hardware bil. interpolation
             float xf = (float(x) + 0.5f) * scale_x;
             float yf = (float(y) + 0.5f) * scale_y;
-            dst.atIVxxx(y,x) = tex2D(floatTex,xf,yf);
+            dst(y,x) = tex2D(floatTex,xf,yf);
 #else
             //software bil. interpolation
             float xf = (float(x) + 0.5f) * scale_x - 0.5f;
             float yf = (float(y) + 0.5f) * scale_y - 0.5f;
-            dst.atIVxxx(y,x) = src.inter(yf,xf);
+            dst(y,x) = src.inter(yf,xf);
 #endif
 
         }
@@ -312,8 +312,8 @@ void d_convolveOuterLinear(ImageView<T> src, ImageView<T> dst)
         int y = i / blockSizeX;
         int gx = x + blockStartX;
         int gy = y + blockStartY;
-        src.clampToEdge7(gy,gx);
-        buffer[y][x] = src.atIVxxx(gy,gx);
+        src.clampToEdge(gy,gx);
+        buffer[y][x] = src(gy,gx);
     }
 
     __syncthreads();
@@ -343,8 +343,8 @@ void d_convolveOuterLinear(ImageView<T> src, ImageView<T> dst)
             sum += buffer2[ty][tx + RADIUS + j] * kernel[kernelIndex];
         }
 
-        if(dst.inImage7(yp,xp))
-            dst.atIVxxx(yp,xp) = sum;
+        if(dst.inImage(yp,xp))
+            dst(yp,xp) = sum;
         yp += BLOCK_H;
         ty += BLOCK_H;
     }
@@ -413,7 +413,7 @@ void d_convolveOuterHalo(ImageView<T> src, ImageView<T> dst)
     //copy main data
     for(int i = 0; i < Y_ELEMENTS; ++i)
     {
-        buffer[ty + i * BLOCK_H + RADIUS][tx + RADIUS]  = src.clampedRead7(y + i * BLOCK_H,x);
+        buffer[ty + i * BLOCK_H + RADIUS][tx + RADIUS]  = src.clampedRead(y + i * BLOCK_H,x);
     }
 
     //top and bottom halo
@@ -423,10 +423,10 @@ void d_convolveOuterHalo(ImageView<T> src, ImageView<T> dst)
         for(int i = warp_lane; i < RADIUS; i+=num_warps)
         {
             buffer[i][lane_id + RADIUS]  =
-                    src.clampedRead7(blockStartY + i,x_tile + lane_id);
+                    src.clampedRead(blockStartY + i,x_tile + lane_id);
 
             buffer[BLOCK_H2 + RADIUS + i][lane_id + RADIUS]  =
-                    src.clampedRead7(blockStartY + BLOCK_H2 + RADIUS  + i,x_tile + lane_id);
+                    src.clampedRead(blockStartY + BLOCK_H2 + RADIUS  + i,x_tile + lane_id);
         }
     }
 
@@ -447,7 +447,7 @@ void d_convolveOuterHalo(ImageView<T> src, ImageView<T> dst)
             if(local_warp_id < side_halo_rows_per_warp)
             {
                 buffer[i][local_lane_id]  =
-                        src.clampedRead7(blockStartY + i,blockStartX + local_lane_id);
+                        src.clampedRead(blockStartY + i,blockStartX + local_lane_id);
             }
         }
     }
@@ -464,7 +464,7 @@ void d_convolveOuterHalo(ImageView<T> src, ImageView<T> dst)
             if(local_warp_id < side_halo_rows_per_warp)
             {
                 buffer[i][local_lane_id + RADIUS + BLOCK_W]  =
-                        src.clampedRead7(blockStartY + i,blockStartX + local_lane_id + RADIUS + BLOCK_W);
+                        src.clampedRead(blockStartY + i,blockStartX + local_lane_id + RADIUS + BLOCK_W);
             }
         }
     }
@@ -496,8 +496,8 @@ void d_convolveOuterHalo(ImageView<T> src, ImageView<T> dst)
             sum += buffer2[ty][tx + RADIUS + j] * kernel[kernelIndex];
         }
 
-        if(dst.inImage7(yp,xp))
-            dst.atIVxxx(yp,xp) = sum;
+        if(dst.inImage(yp,xp))
+            dst(yp,xp) = sum;
         yp += BLOCK_H;
         ty += BLOCK_H;
     }
@@ -551,7 +551,7 @@ void d_convolveInner(ImageView<T> src, ImageView<T> dst)
 
     //copy main data
     for(int i = 0; i < Y_ELEMENTS; ++i)
-        buffer[ty + i * TILE_H][tx]  = src.clampedRead7(y + i * TILE_H,x);
+        buffer[ty + i * TILE_H][tx]  = src.clampedRead(y + i * TILE_H,x);
 
 
 
@@ -613,7 +613,7 @@ void d_convolveInner(ImageView<T> src, ImageView<T> dst)
 
         //        if(dst.inImage(gx,gy))
         //            dst(g,yp) = sum;
-        dst.clampedWrite7(gy,gx,sum);
+        dst.clampedWrite(gy,gx,sum);
     }
 
 

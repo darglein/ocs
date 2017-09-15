@@ -165,7 +165,7 @@ void loadBuffer(Saiga::ImageArrayView<float>& images, float buffer[3][3][3], int
         int dx = i % 3 - 1;
         int dy = i / 3 % 3 - 1;
         int dz = i / 3 / 3 % 3 - 1;
-        float v = images[layer+dz].atIVxxx(y+dy,x+dx);
+        float v = images[layer+dz](y+dy,x+dx);
         buffer[dx+1][dy+1][dz+1] = v;
 
     }
@@ -205,7 +205,7 @@ int x_tile, int y_tile){
 
         float v = (lx >= 0 && lx < TILE_W && ly >= 0 && ly < TILE_H) ?
                 sbuffer[lz][ly][lx] :
-                images[lz].atIVxxx( ly + y_tile,lx + x_tile);
+                images[lz]( ly + y_tile,lx + x_tile);
         buffer[dx+1][dy+1][dz+1] = v;
     }
 }
@@ -595,7 +595,7 @@ void d_FindPointsMulti4(
     __shared__ float sbuffer[LAYERS + 2][TILE_H][TILE_W];
 
     for(int i = 0; i < LAYERS + 2; ++i){
-        sbuffer[i][ty][tx]  = images[i].clampedRead7(yo,xo);
+        sbuffer[i][ty][tx]  = images[i].clampedRead(yo,xo);
     }
 
     //only process inner pixels
