@@ -1,16 +1,26 @@
 
 
 FILE(GLOB main_SRC  *.cpp)
-FILE(GLOB saiga_SRC  saiga/*.cpp)
+
+if(NOT SAIGA_FOUND)
+	FILE(GLOB_RECURSE saiga_SRC  dep/saiga/*.cpp)
+	SET(main_SRC ${main_SRC} ${saiga_SRC})
+	include_directories(dep)
+endif()
+
 FILE(GLOB_RECURSE PROG_HEADER  *.h)
 
 
 SET(PROG_SRC ${main_SRC})
 
 
-FILE(GLOB_RECURSE CUDA_SRC  cuda/*.cu)
-FILE(GLOB_RECURSE SAIGA_CUDA_SRC  saiga/*.cu)
-cuda_compile(cuda_objs ${CUDA_SRC} ${SAIGA_CUDA_SRC})
+FILE(GLOB_RECURSE CUDA_SRC  *.cu)
+if(NOT SAIGA_FOUND)
+	FILE(GLOB_RECURSE SAIGA_CUDA_SRC  dep/saiga/*.cu)
+	SET(CUDA_SRC ${CUDA_SRC} ${SAIGA_CUDA_SRC})
+endif()
+
+cuda_compile(cuda_objs ${CUDA_SRC})
 SET(PROG_SRC ${PROG_SRC} ${cuda_objs})
 
 #creates 'folders' in the solution explorer of visual studio
@@ -23,7 +33,7 @@ include_directories(.)
 
 
 
-add_executable(${PROG_NAME} ${PROG_SRC} ${saiga_SRC} ${PROG_HEADER})
+add_executable(${PROG_NAME} ${PROG_SRC} ${PROG_HEADER})
 target_link_libraries(${PROG_NAME} ${LIBS} )
 
 

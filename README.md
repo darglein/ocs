@@ -66,8 +66,14 @@ int extractedPoints = sift.compute(d_img, keypoints, descriptors)
 ## Dependencies
 
  * [CUDA 8](https://developer.nvidia.com/cuda-downloads)
- * [Saiga](https://github.com/darglein/saiga) for some basic CUDA image processing
- * [OpenCV](https://github.com/opencv/opencv) only for the samples.
+
+## Optional Dependencies
+
+ * [Saiga](https://github.com/darglein/saiga) 
+The important files of saiga are included in src/dep. If you have saiga installed on your system, the installed library will be used.
+
+ * [OpenCV](https://github.com/opencv/opencv) 
+For running the sample.
 
 ## TODO
 

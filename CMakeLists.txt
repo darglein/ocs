@@ -56,9 +56,12 @@ message(STATUS "CUDA_LIBRARIES: ${CUDA_LIBRARIES}")
 
 
 #saiga
-#find_package(SAIGA REQUIRED)
-#include_directories(${SAIGA_INCLUDE_DIRS})
-#SET(LIBS ${LIBS} ${SAIGA_LIBRARY})
+find_package(SAIGA)
+if(SAIGA_FOUND)
+	include_directories(${SAIGA_INCLUDE_DIRS})
+	SET(LIBS ${LIBS} ${SAIGA_LIBRARY})
+	add_definitions(-DHAS_SAIGA)
+endif()
 
 
 #opencv
