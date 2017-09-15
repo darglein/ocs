@@ -8,7 +8,6 @@
 
 #include "opencv2/opencv.hpp"
 #include "cuda/cudaSift.h"
-#include "saiga/cuda/imageProcessing/image.h"
 
 
 namespace cudasift {

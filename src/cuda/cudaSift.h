@@ -108,18 +108,17 @@
 
 #pragma once
 
-
-#include "saiga/cuda/cudaHelper.h"
-#include "saiga/cuda/imageProcessing/image.h"
-#include "saiga/cuda/common.h"
-#include "saiga/cuda/array_view.h"
-#include "saiga/cuda/imageProcessing/imageView.h"
+#include "saiga/cudaHelper.h"
+#include "saiga/image.h"
 
 #include "sift_defines.h"
 
 #ifdef SIFT_DEBUG
 #include "saiga/opencv/opencv.h"
 #endif
+
+using std::cout;
+using std::endl;
 
 namespace cudasift {
 

@@ -13,7 +13,7 @@
 #include "cudaSift.h"
 #include "matching.h"
 
-#include "saiga/opencv/opencv.h"
+#include "saiga/opencv.h"
 #include "wrapper.h"
 
 

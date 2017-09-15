@@ -109,12 +109,11 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 #include "cudaSift.h"
-#include "saiga/cuda/thread_info.h"
-#include "saiga/cuda/reduce.h"
-#include "saiga/cuda/device_helper.h"
+#include "saiga/thread_info.h"
+#include "saiga/reduce.h"
+#include "saiga/device_helper.h"
 
-using std::cout;
-using std::endl;
+
 
 namespace cudasift {
 template<unsigned int THREADS_PER_BLOCK, int MAX_RADIUS>

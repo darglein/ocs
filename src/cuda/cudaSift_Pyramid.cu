@@ -107,10 +107,11 @@
 \**********************************************************************************************/
 
 #include "cudaSift.h"
-#include "saiga/cuda/imageProcessing/imageProcessing.h"
+#include "saiga/scale.h"
+#include "saiga/filter.h"
+#include "saiga/difference.h"
 
-using std::cout;
-using std::endl;
+
 
 namespace cudasift {
 

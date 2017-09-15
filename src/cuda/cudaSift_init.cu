@@ -107,11 +107,9 @@
 \**********************************************************************************************/
 
 #include "cudaSift.h"
-#include "saiga/cuda/imageProcessing/imageProcessing.h"
+#include "saiga/filter.h"
 
 
-using std::cout;
-using std::endl;
 
 namespace cudasift {
 SIFTGPU::SIFTGPU(int imageWidth, int imageHeight, bool doubleScale, int maxOctaves,

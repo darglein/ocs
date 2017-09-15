@@ -108,7 +108,6 @@
 
 #pragma once
 
-#include "saiga/cuda/common.h"
 
 namespace cudasift {
 

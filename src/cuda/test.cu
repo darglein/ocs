@@ -7,8 +7,8 @@
 #include "cuda/cudaSift.h"
 #include "cuda/matching.h"
 #include "cuda/wrapper.h"
-#include "saiga/opencv/opencv.h"
-#include "saiga/time/performanceMeasure.h"
+#include "saiga/opencv.h"
+#include "saiga/performanceMeasure.h"
 
 namespace cudasift {
 

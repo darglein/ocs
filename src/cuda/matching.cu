@@ -5,9 +5,8 @@
  */
 
 #include "matching.h"
-#include "saiga/cuda/thread_info.h"
-#include "saiga/cuda/reduce.h"
-#include "saiga/time/timer.h"
+#include "saiga/reduce.h"
+#include "saiga/thread_info.h"
 
 namespace cudasift {
 
