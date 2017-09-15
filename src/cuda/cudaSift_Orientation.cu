@@ -212,10 +212,15 @@ __global__ void ComputeOrientationWarp(
         )
 {
 
-    Saiga::CUDA::ThreadInfo<THREADS_PER_BLOCK> ti;
+//    Saiga::CUDA::ThreadInfo<THREADS_PER_BLOCK> ti;
 
+    int local_thread_id = threadIdx.x;
+    int   lane_id         = local_thread_id & (WARP_SIZE-1);
+    int thread_id       = THREADS_PER_BLOCK * blockIdx.x + threadIdx.x;
+    int warp_id         = thread_id   / WARP_SIZE;
+    int warp_lane       = threadIdx.x / WARP_SIZE;
 
-    int id = ti.warp_id;
+    int id = warp_id;
 
     if(id >= numPoints)
         return;
@@ -227,8 +232,8 @@ __global__ void ComputeOrientationWarp(
     __shared__ float stemphist[THREADS_PER_BLOCK / WARP_SIZE * (n+4)];
     __shared__ int outPointsa[THREADS_PER_BLOCK / WARP_SIZE];
 
-    float* hist = shist + ti.warp_lane * n;
-    float* temphist = stemphist + ti.warp_lane * (n+4);
+    float* hist = shist + warp_lane * n;
+    float* temphist = stemphist + warp_lane * (n+4);
 
     SiftPoint& sp = d_Sift[id+pointsBefore];
 
@@ -250,18 +255,18 @@ __global__ void ComputeOrientationWarp(
         sigma = SIFT_ORI_SIG_FCTR * scl_octv;
     }
     float omax = calcOrientationHistWarp(d_img,sp.ixpos,sp.iypos,radius,sigma,
-                                         hist,temphist,ti.lane_id);
+                                         hist,temphist,lane_id);
 
     float mag_thr = (float)(omax * SIFT_ORI_PEAK_RATIO);
 
-    int& outPoints = outPointsa[ti.warp_lane];
-    if(ti.lane_id == 0)
+    int& outPoints = outPointsa[warp_lane];
+    if(lane_id == 0)
         outPoints = 0;
 
 
 
 //    for( int j = ti.lane_id; j < n; j+=WARP_SIZE )
-    WARP_FOR(j,ti.lane_id,n,WARP_SIZE)
+    WARP_FOR(j,lane_id,n,WARP_SIZE)
     {
         int leftBin = j > 0 ? j - 1 : n - 1;
         int rightBin = j < n-1 ? j + 1 : 0;
@@ -293,7 +298,7 @@ __global__ void ComputeOrientationWarp(
         }
     }
 
-	if (ti.lane_id == 0 && outPoints == 0)
+    if (lane_id == 0 && outPoints == 0)
 	{
 		sp.orientation = 0;
 	}

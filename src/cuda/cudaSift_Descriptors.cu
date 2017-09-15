@@ -331,7 +331,7 @@ __global__ void calcSIFTDescriptorsBlock(
         )
 {
 
-    Saiga::CUDA::ThreadInfo<THREADS_PER_BLOCK> ti;
+//    Saiga::CUDA::ThreadInfo<THREADS_PER_BLOCK> ti;
 
     const int d = SIFT_DESCR_WIDTH; //4
     const int n = SIFT_DESCR_HIST_BINS; //8
@@ -349,7 +349,7 @@ __global__ void calcSIFTDescriptorsBlock(
     float* hist = shist;
 
 
-    int id = ti.block_id;
+    int id = blockIdx.x;
 
     if(id >= numPoints)
         return;
@@ -375,14 +375,14 @@ __global__ void calcSIFTDescriptorsBlock(
 
 
     ImageView<float> d_img = images[layer];
-    calcSIFTDescriptorBlock<THREADS_PER_BLOCK,MAX_RADIUS>(d_img,sp.ixpos,sp.iypos,angle, size*0.5f, hist, desc,sreduce,ti.local_thread_id,ti.lane_id);
+    calcSIFTDescriptorBlock<THREADS_PER_BLOCK,MAX_RADIUS>(d_img,sp.ixpos,sp.iypos,angle, size*0.5f, hist, desc,sreduce,threadIdx.x,threadIdx.x & (WARP_SIZE-1));
 
     //Don't need this syncthreads because every warp writes its own computed values
     //    __syncthreads();
 
     //    for(int k = ti.local_thread_id; k < desclen; k+=THREADS_PER_BLOCK )
     {
-        rdesc[ti.local_thread_id] = desc[ti.local_thread_id];
+        rdesc[threadIdx.x] = desc[threadIdx.x];
     }
 
 

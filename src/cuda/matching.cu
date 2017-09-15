@@ -86,10 +86,15 @@ void sortK(float *corrData, Saiga::array_view<float> out_distance, Saiga::array_
     __shared__ float maxScore[THREADS_PER_BLOCK * K]; //2048 * 4 = 8100
     __shared__ int maxIndex[THREADS_PER_BLOCK * K];
 
-    Saiga::CUDA::ThreadInfo<THREADS_PER_BLOCK> ti;
+//    Saiga::CUDA::ThreadInfo<THREADS_PER_BLOCK> ti;
 
-    int id = ti.thread_id;
-    int idx = ti.local_thread_id;
+    int local_thread_id = threadIdx.x;
+    int block_id        = blockIdx.x;
+
+    int thread_id       = THREADS_PER_BLOCK * block_id + local_thread_id;
+
+    int id = thread_id;
+    int idx = local_thread_id;
 
     if(id >= numPts1)
         return;
@@ -176,9 +181,16 @@ void kmin( Saiga::ImageView<float> distances, float* outData, int* outIndices)
     __shared__ volatile int minIndicesRes[warps_per_block][K];
 
 
-    Saiga::CUDA::ThreadInfo<THREADS_PER_BLOCK,LOCAL_WARP_SIZE> ti;
+//    Saiga::CUDA::ThreadInfo<THREADS_PER_BLOCK,LOCAL_WARP_SIZE> ti;
 
-    int y = ti.warp_id;
+
+//    warp_id         = thread_id   / LOCAL_WARP_SIZE;
+
+    int  local_thread_id = threadIdx.x;
+    int warp_lane       = local_thread_id / LOCAL_WARP_SIZE;
+    int tid = local_thread_id + blockIdx.x * THREADS_PER_BLOCK;
+    int lane_id = local_thread_id & (LOCAL_WARP_SIZE-1);
+    int y = tid / LOCAL_WARP_SIZE;
 
 
     if(y >= distances.height)
@@ -197,7 +209,7 @@ void kmin( Saiga::ImageView<float> distances, float* outData, int* outIndices)
     }
 
     //    data += y * pitch;    //for every element
-    for (int i = ti.lane_id; i < distances.width; i += LOCAL_WARP_SIZE) {
+    for (int i = lane_id; i < distances.width; i += LOCAL_WARP_SIZE) {
         int newIdx = i;
         float newval = distances.atIVxxx(y,i);
         //ignore all values that are larger than the largest value
@@ -249,11 +261,11 @@ void kmin( Saiga::ImageView<float> distances, float* outData, int* outIndices)
         //when the value is the same
         warpReduceMinIndex<float,int,LOCAL_WARP_SIZE,false>(vTmp,iTmp);
 
-        if(ti.lane_id == 0){
-            minValuesRes[ti.warp_lane][k] = vTmp;
-            minIndicesRes[ti.warp_lane][k] = iTmp;
+        if(lane_id == 0){
+            minValuesRes[warp_lane][k] = vTmp;
+            minIndicesRes[warp_lane][k] = iTmp;
         }
-        iTmp = minIndicesRes[ti.warp_lane][k];
+        iTmp = minIndicesRes[warp_lane][k];
 
         if(iTmp == currentMinIndex){
             currentMinPtr++;
@@ -264,9 +276,9 @@ void kmin( Saiga::ImageView<float> distances, float* outData, int* outIndices)
 
     outData += y * K;
     outIndices += y * K;
-    for(int k = ti.lane_id ; k < K ; k+=LOCAL_WARP_SIZE){
-        outData[k] = minValuesRes[ti.warp_lane][k];
-        outIndices[k] = minIndicesRes[ti.warp_lane][k];
+    for(int k = lane_id ; k < K ; k+=LOCAL_WARP_SIZE){
+        outData[k] = minValuesRes[warp_lane][k];
+        outIndices[k] = minIndicesRes[warp_lane][k];
     }
 
 
@@ -368,9 +380,15 @@ void d_filterByRadius(Saiga::array_view<SiftPoint> keypoints1, Saiga::array_view
                       Saiga::ImageView<float> distances,
                       float radius)
 {
-    Saiga::CUDA::ThreadInfo<THREADS_PER_BLOCK,LOCAL_WARP_SIZE> ti;
+//    Saiga::CUDA::ThreadInfo<THREADS_PER_BLOCK,LOCAL_WARP_SIZE> ti;
+    int local_thread_id = threadIdx.x;
+    int block_id        = blockIdx.x;
 
-    int y = ti.warp_id;
+    int lane_id         = local_thread_id & (LOCAL_WARP_SIZE-1);
+    int thread_id       = THREADS_PER_BLOCK * block_id + local_thread_id;
+    int warp_id         = thread_id   / LOCAL_WARP_SIZE;
+
+    int y = warp_id;
 
     if(y >= distances.height)
         return;
@@ -379,7 +397,7 @@ void d_filterByRadius(Saiga::array_view<SiftPoint> keypoints1, Saiga::array_view
 
     float2 pos = reinterpret_cast<float2*>((keypoints1.data()+y))[0];
 
-    for(int i = ti.lane_id; i < distances.width; i += LOCAL_WARP_SIZE){
+    for(int i = lane_id; i < distances.width; i += LOCAL_WARP_SIZE){
         static_assert(sizeof(SiftPoint) == 32, "siftpoint size");
         float2 pos2 = reinterpret_cast<float2*>((keypoints2.data()+i))[0];
         float dx = pos2.x - pos.x;
