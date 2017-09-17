@@ -150,6 +150,7 @@ int SIFTGPU::compute(ImageView<float> d_img, Saiga::array_view<SiftPoint> keypoi
     if( doubleScale ){
         scaleDownKeypoints(keypoints);
     }
+
     CUDA_SYNC_CHECK_ERROR();
     return n;
 }
@@ -191,6 +192,10 @@ int SIFTGPU::findScaleSpaceExtrema(Saiga::array_view<SiftPoint> keypoints, Saiga
     Saiga::CUDA::CudaScopedTimerPrint tim("SIFTGPU extrema detection + descriptors");
 #endif
 
+
+//    cout << pointCounter.size() << endl;
+//    CUDA_SYNC_CHECK_ERROR();
+//    pointCounter[0] = 0;
     thrust::fill(pointCounter.begin(),pointCounter.end(),0);
 	CUDA_SYNC_CHECK_ERROR();
     int n = 0;
@@ -202,6 +207,10 @@ int SIFTGPU::findScaleSpaceExtrema(Saiga::array_view<SiftPoint> keypoints, Saiga
         n = pointCounter[0];
         int pointsBefore = n;
 
+#ifdef SIFT_DEBUG
+        cout << "Extracting Points of octave " << o << ". Points before: " << pointsBefore << endl;
+#endif
+
         auto dst2 = Saiga::ImageArrayView<float>(dogPyramid2[o*(nOctaveLayers + 2)], nOctaveLayers + 2);
         FindPointsMulti(keypoints,dst2,o);
 
@@ -210,6 +219,11 @@ int SIFTGPU::findScaleSpaceExtrema(Saiga::array_view<SiftPoint> keypoints, Saiga
 
         int newPoints = n - pointsBefore;
 		SAIGA_ASSERT(newPoints >= 0);
+
+#ifdef SIFT_DEBUG
+        cout << "Found " << newPoints << " new points." << endl;
+#endif
+
 
         if(newPoints > 0){
             auto img2 = Saiga::ImageArrayView<float>(gaussianPyramid2[o*(nOctaveLayers + 3)], nOctaveLayers + 3);
@@ -221,6 +235,8 @@ int SIFTGPU::findScaleSpaceExtrema(Saiga::array_view<SiftPoint> keypoints, Saiga
 
             descriptorsMulti(keypoints,descriptors,img2,pointsBefore,newPoints);
         }
+
+
     }
 
     n = pointCounter[0];

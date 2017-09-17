@@ -110,6 +110,7 @@
 
 #include "saiga/cuda/device_helper.h"
 #include "saiga/cuda/memory.h"
+#include "saiga/cuda/math/inverse.h"
 
 
 
@@ -266,7 +267,7 @@ void deriveSecond(float buffer[3][3][3], float derivs2[6]){
             buffer[1][2][0] + buffer[1][0][0] ) * cross_deriv_scale;
 }
 
-#if 0
+#if 1
 template<unsigned int THREADS_PER_BLOCK,unsigned int LOCAL_WARP_SIZE>
 __global__ static
 __launch_bounds__(THREADS_PER_BLOCK)
@@ -306,7 +307,7 @@ void d_FindPointsMulti2(
 
         //fast check to eliminate most candidates
         float& val = buffer[bufferOffset][1][1][1];
-        val = images[layer](x,y);
+        val = images[layer](y,x);
 
         if(fabsf(val) < threshold){
             continue;
@@ -758,8 +759,8 @@ void d_FindPointsMulti4(
 
             unsigned int idx = atomicInc(pointCounter, 0x7fffffff);
             if(idx < maxFeatures){
-//                SiftPoint& sp = d_Sift[idx];
-                                SiftPoint sp;
+                SiftPoint& sp = keypoints[idx];
+//                                SiftPoint sp;
                 sp.ixpos = x;
                 sp.iypos = y;
                 sp.xpos = (x + xc)  * (1 << octave);
@@ -768,7 +769,7 @@ void d_FindPointsMulti4(
 				sp.size = sigma * powf(2.f, float(layer + xi) / LAYERS)*(1 << octave) * 2;
                 sp.response = fabsf(contr);
                 sp.orientation = 0;
-				Saiga::CUDA::vectorCopy(&sp, keypoints.data() + idx);
+//				Saiga::CUDA::vectorCopy(&sp, keypoints.data() + idx);
             }else{
                 atomicDec(pointCounter, 0x7fffffff);
             }
@@ -796,11 +797,16 @@ void findPointsCaller(
 		);
 	dim3 threads(TILE_W, TILE_H, 1);
 
+    //launching a kernel with 0 blocks leads to errors in cuda 9
+    if(blocks.x == 0 || blocks.y == 0)
+        return;
+
 
 	d_FindPointsMulti4<TILE_W, TILE_H, OCTAVE_LAYERS> << <blocks, threads >> >(images,
 		keypoints,
 		pointCounter,
 		contrastThreshold, edgeThreshold, octave, sigma, maxFeatures, threshold);
+       CUDA_SYNC_CHECK_ERROR();
 }
 
 
@@ -808,8 +814,7 @@ void SIFTGPU::FindPointsMulti(Saiga::array_view<SiftPoint> keypoints, Saiga::Ima
 #ifdef SIFT_PRINT_TIMINGS
     Saiga::CUDA::CudaScopedTimerPrint tim("SIFTGPU::FindPointsMulti");
 #endif
-//    int w = images[0].width;
-//    int h = images[0].height;
+
 //    int d = nOctaveLayers;
     //cout << "FindPointsMulti size: " << w << "x" << h << "x" << d << endl;
     //cout << "Number of inner pixels: " << w*h*d << endl;
@@ -819,6 +824,8 @@ void SIFTGPU::FindPointsMulti(Saiga::array_view<SiftPoint> keypoints, Saiga::Ima
 
 #if 0
     {
+            int w = images[0].width;
+            int h = images[0].height;
        // Saiga::CUDA::CudaScopedTimerPrint tim("SIFTGPU::FindPointsMulti1");
         const int BLOCK_SIZE = 128;
         const int LOCAL_WARP_SIZE = 1;
@@ -851,8 +858,6 @@ void SIFTGPU::FindPointsMulti(Saiga::array_view<SiftPoint> keypoints, Saiga::Ima
 			thrust::raw_pointer_cast(pointCounter.data()),
 			contrastThreshold, edgeThreshold, o, nOctaveLayers, sigma, nfeatures, threshold);
     }
-
-//    exit(0);q
 
 
     CUDA_SYNC_CHECK_ERROR();

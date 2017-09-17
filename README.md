@@ -16,9 +16,14 @@ OCS is an open source GPU implemenation of SIFT feature detection and matching. 
  * Use a fixed gaussian blur kernel size of 9x9
 
 
-## Timings - Feature Detection
+## Timings
 
-The following SIFT settings were used for the tests:
+For all meassurements the median time of 50 executions was taken. Host-Device data transfers for example uploading the image for feature detection is not included. The test code can be found in src/test.cu and  is run by default.
+
+
+# Feature Detection
+
+Sift Parameters:
 
 * doubleScale = false
 * octaveLayers = 3
@@ -27,22 +32,23 @@ The following SIFT settings were used for the tests:
 * sigma = 1.6
 * maxDescriptorRadius = 16
 
-All timings are given in milliseconds (ms).
 
 | Image Size  |      640x480      | 1280x720 | 1920x1080 | 3000x1688 | 4096x2304 | 
 | --- | --- | --- | --- |--- |--- |
 | #Features | 990 | 1408 | 1700 | 3382 |6184 |
-| GTX 1080 | - | - | - | - |- |
+| GTX 1080 | 1.185 | 1.867 | 2.683 | 4.974 |8.445 |
 | GTX 970 | 2.393 | 3.569| 4.639 | 8.513 |14.133 |
+| GTX 760 | 3.245 | 5.630 | 8.651 | 17.639 |31.302 |
 
-## Timings - Matching
+# Matching
 
-Time in (ms) for a knn search with k=4. The match size gives the number of keypoints/descriptors for each image. In the largest test (6184x6184) a total number of 38241856 Sift descriptor comparisons were performed.
+Bruteforce knn search with k=4 
 
 | Match Size   |      990x990      | 1408x1408 | 1700x1700 | 3382x3382 |  6184x6184 | 
 | --- | --- | --- | --- |--- |--- |
-| GTX 1080 | 0.327 | 0.655 | 0.979 | 3.432 |10.947 |
+| GTX 1080 | 0.281 | 0.559 | 0.837 | 3.275 |11.010 |
 | GTX 970 | 0.708 | 1.396 | 2.095 | 7.976 |25.953 |
+| GTX 760 | 1.161 | 2.311 | 3.472 | 13.231 |44.369 |
 
 ## Usage
 

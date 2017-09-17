@@ -5,14 +5,19 @@
  */
 
 #include <iostream>
-
+#include <saiga/cuda/tests/test.h>
+#include <saiga/cuda/cudaHelper.h>
 namespace cudasift {
 void detectedKeypointsTest();
 void matchTest();
 }
 
 int main(int argc, char *argv[]) {
+    Saiga::CUDA::initCUDA();
+    Saiga::CUDA::testThrust();
+
     cudasift::detectedKeypointsTest();
     cudasift::matchTest();
+    Saiga::CUDA::destroyCUDA();
     return 0;
 }

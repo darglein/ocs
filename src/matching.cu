@@ -8,6 +8,7 @@
 
 #include "saiga/cuda/device_helper.h"
 #include "saiga/cuda/reduce.h"
+#include "saiga/cuda/shfl_helper.h"
 
 namespace cudasift {
 
@@ -155,8 +156,8 @@ __device__ inline
 void warpReduceMinIndex(T& val, Ti& index) {
 #pragma unroll
     for (int offset = LOCAL_WARP_SIZE/2; offset > 0; offset /= 2){
-        auto v = RESULT_FOR_ALL_THREADS ? __shfl_xor(val, offset) : __shfl_down(val, offset);
-        auto i = RESULT_FOR_ALL_THREADS ? __shfl_xor(index, offset) : __shfl_down(index, offset);
+        auto v = RESULT_FOR_ALL_THREADS ? Saiga::CUDA::shfl_xor(val, offset) : Saiga::CUDA::shfl_down(val, offset);
+        auto i = RESULT_FOR_ALL_THREADS ? Saiga::CUDA::shfl_xor(index, offset) : Saiga::CUDA::shfl_down(index, offset);
         val = min(val , v);
         index = (v == val) ? i : index;
     }

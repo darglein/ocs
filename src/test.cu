@@ -22,8 +22,11 @@ void detectedKeypointsTest(){
         "landscape_small.jpg",
         "landscape.jpg",
     };
+    int iterations = 50;
+
 
     for(auto str : imageFiles){
+
 
         //load image with opencv
         cv::Mat1f img = cv::imread("data/"+str,cv::IMREAD_GRAYSCALE);
@@ -44,10 +47,12 @@ void detectedKeypointsTest(){
 
 
         Saiga::measureObject<Saiga::CUDA::CudaScopedTimer>(
-                    "sift.compute",50, [&]()
+                    "sift.compute",iterations, [&]()
         {
             extractedPoints = sift.compute(cimg, keypoints, descriptors);
         });
+
+
 
         //        cout << "Extracted " << extractedPoints << " keypoints in " << time << "ms." << endl;
         cout << "Extracted " << extractedPoints << " keypoints." << endl;
@@ -67,6 +72,7 @@ void detectedKeypointsTest(){
 
         cv::imwrite("out/"+str+".features.jpg",output);
         cout << endl;
+        CUDA_SYNC_CHECK_ERROR();
 
     }
 }
@@ -126,7 +132,7 @@ void matchTest(){
 
 
         Saiga::measureObject<Saiga::CUDA::CudaScopedTimer>(
-                    "matcher.knnMatch",50, [&]()
+                    "matcher.knnMatch",iterations, [&]()
         {
             matcher.knnMatch(Saiga::array_view<float>(descriptors1).slice_n(0, extractedPoints1 * 128),
                              Saiga::array_view<float>(descriptors2).slice_n(0, extractedPoints2 * 128),
