@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Copyright (c) 2017 Darius Rückert
  * Licensed under the MIT License.
  * See LICENSE file for more information.
@@ -422,7 +422,7 @@ void d_FindPointsMulti4(
         if(idx < maxFeatures)
         {
             SiftPoint& sp = keypoints[idx];
-//                                            SiftPoint sp;
+            //                                            SiftPoint sp;
             sp.ixpos = x;
             sp.iypos = y;
             sp.xpos = (x + xc)  * (1 << octave);
@@ -431,7 +431,7 @@ void d_FindPointsMulti4(
             sp.size = sigma * powf(2.f, float(layer + xi) / LAYERS)*(1 << octave) * 2;
             sp.response = fabsf(contr);
             sp.orientation = 0;
-//                            Saiga::CUDA::vectorCopy(&sp, keypoints.data() + idx);
+            //                            Saiga::CUDA::vectorCopy(&sp, keypoints.data() + idx);
         }else{
             atomicDec(pointCounter, 0x7fffffff);
         }
@@ -476,35 +476,9 @@ void SIFTGPU::FindPointsMulti(Saiga::array_view<SiftPoint> keypoints, Saiga::Ima
 #ifdef SIFT_PRINT_TIMINGS
     Saiga::CUDA::CudaScopedTimerPrint tim("SIFTGPU::FindPointsMulti");
 #endif
-
-    //    int d = nOctaveLayers;
-    //cout << "FindPointsMulti size: " << w << "x" << h << "x" << d << endl;
-    //cout << "Number of inner pixels: " << w*h*d << endl;
-
     int threshold = Saiga::iFloor(0.5 * contrastThreshold / nOctaveLayers * 255 * SIFT_FIXPT_SCALE);
 
-
-#if 0
     {
-        int w = images[0].width;
-        int h = images[0].height;
-        // Saiga::CUDA::CudaScopedTimerPrint tim("SIFTGPU::FindPointsMulti1");
-        const int BLOCK_SIZE = 128;
-        const int LOCAL_WARP_SIZE = 1;
-        dim3 blocks(Saiga::iDivUp(w, BLOCK_SIZE / LOCAL_WARP_SIZE), h);
-        dim3 threads(BLOCK_SIZE,1,1);
-        d_FindPointsMulti2<BLOCK_SIZE,LOCAL_WARP_SIZE><<<blocks,threads>>>(images,
-                                                                           keypoints,
-                                                                           thrust::raw_pointer_cast(pointCounter.data()),
-                                                                           contrastThreshold,edgeThreshold,o,nOctaveLayers,sigma,nfeatures,threshold);
-    }
-
-    return;
-
-    thrust::fill(pointCounter.begin(),pointCounter.end(),0);
-#endif
-    {
-        //        Saiga::CUDA::CudaScopedTimerPrint tim("SIFTGPU::FindPointsMulti");
         using FindKeypointsFunctionType = std::function<void(Saiga::ImageArrayView<float>, Saiga::array_view<SiftPoint>, unsigned int*, float, float, int octave, int, float, int, int)>;
         FindKeypointsFunctionType f[6] = {
             findPointsCaller<1>,
@@ -520,7 +494,6 @@ void SIFTGPU::FindPointsMulti(Saiga::array_view<SiftPoint> keypoints, Saiga::Ima
                              thrust::raw_pointer_cast(pointCounter.data()),
                              contrastThreshold, edgeThreshold, o, nOctaveLayers, sigma, nfeatures, threshold);
     }
-
 
     CUDA_SYNC_CHECK_ERROR();
 }

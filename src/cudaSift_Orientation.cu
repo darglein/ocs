@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Copyright (c) 2017 Darius Rückert
  * Licensed under the MIT License.
  * See LICENSE file for more information.
@@ -111,11 +111,7 @@
 #include "saiga/cuda/device_helper.h"
 #include "saiga/cuda/reduce.h"
 
-
-
-
 namespace cudasift {
-
 
 // Computes a gradient orientation histogram at a specified pixel
 __device__
@@ -132,13 +128,11 @@ static float calcOrientationHistWarp(  ImageView<float> d_img,
 
     float expf_scale = -1.f/(2.f * sigma * sigma);
 
-//    for( i = lane_id; i < n+4; i+=WARP_SIZE ){
     WARP_FOR(i,lane_id,n+4,WARP_SIZE)
     {
         temphist[i] = 0.f;
     }
 
-//    for(  k = lane_id; k < len; k+=WARP_SIZE )
     WARP_FOR(k,lane_id,len,WARP_SIZE)
     {
         i = k / (RADIUS*2+1) - RADIUS;
@@ -172,15 +166,12 @@ static float calcOrientationHistWarp(  ImageView<float> d_img,
         atomicAdd(&temphist[bin+2],w * Mag);
     }
 
-
     // smooth the histogram
     if(lane_id < 2){
         temphist[lane_id & 1] = temphist[n + (lane_id & 1)];
         temphist[n + 2 + (lane_id & 1)] = temphist[2 + (lane_id & 1)];
     }
 
-
-//        for( i = lane_id; i < n; i+=WARP_SIZE )
     WARP_FOR(i,lane_id,n,WARP_SIZE)
     {
         int j = i + 2;
@@ -189,10 +180,8 @@ static float calcOrientationHistWarp(  ImageView<float> d_img,
                 temphist[j]*(6.f/16.f);
     }
 
-
     float maxval = hist[lane_id];
 
-//    for( i = lane_id + WARP_SIZE; i < n; i+=WARP_SIZE )
     WARP_FOR(i,lane_id + WARP_SIZE,n,WARP_SIZE)
     {
         maxval = max(maxval,hist[i]);
@@ -214,9 +203,6 @@ __global__ void ComputeOrientationWarp(
         float sig, int maxFeatures
         )
 {
-
-//    Saiga::CUDA::ThreadInfo<THREADS_PER_BLOCK> ti;
-
     int local_thread_id = threadIdx.x;
     int   lane_id         = local_thread_id & (WARP_SIZE-1);
     int thread_id       = THREADS_PER_BLOCK * blockIdx.x + threadIdx.x;
@@ -227,7 +213,6 @@ __global__ void ComputeOrientationWarp(
 
     if(id >= numPoints)
         return;
-
 
     const int n = SIFT_ORI_HIST_BINS;
 
@@ -245,7 +230,6 @@ __global__ void ComputeOrientationWarp(
     sp.unpackOctave(octave,layer,scale);
 
     ImageView<float> d_img = images[layer];
-
 
     //variable radius
     float size = sig*powf(2.f, float(layer) / nOctaveLayers)*(1 << octave)*2;
@@ -266,9 +250,6 @@ __global__ void ComputeOrientationWarp(
     if(lane_id == 0)
         outPoints = 0;
 
-
-
-//    for( int j = ti.lane_id; j < n; j+=WARP_SIZE )
     WARP_FOR(j,lane_id,n,WARP_SIZE)
     {
         int leftBin = j > 0 ? j - 1 : n - 1;
@@ -302,14 +283,9 @@ __global__ void ComputeOrientationWarp(
     }
 
     if (lane_id == 0 && outPoints == 0)
-	{
-		sp.orientation = 0;
-	}
-
-#ifdef CUDA_DEBUG
-	//__syncthreads();
-    //CUDA_ASSERT(outPoints > 0);
-#endif
+    {
+        sp.orientation = 0;
+    }
 }
 
 
@@ -319,15 +295,14 @@ void SIFTGPU::ComputeOrientationMulti(Saiga::array_view<SiftPoint> keypoints, Sa
 #ifdef SIFT_PRINT_TIMINGS
     Saiga::CUDA::CudaScopedTimerPrint tim("  SIFTGPU::ComputeOrientationMulti");
 #endif
+
     const int BLOCK_SIZE = 128;
-	//cout << start << " " << length << endl;
     ComputeOrientationWarp<BLOCK_SIZE,SIFT_ORI_MAX_RADIUS><<<Saiga::iDivUp(length*WARP_SIZE, BLOCK_SIZE),BLOCK_SIZE>>>(images,
                                                                                                                        keypoints,
                                                                                                                        thrust::raw_pointer_cast(pointCounter.data()),
                                                                                                                        start,length,nOctaveLayers,
                                                                                                                        sigma,nfeatures);
     CUDA_SYNC_CHECK_ERROR();
-	
 }
 
 }

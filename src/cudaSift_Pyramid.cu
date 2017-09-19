@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Copyright (c) 2017 Darius Rückert
  * Licensed under the MIT License.
  * See LICENSE file for more information.
@@ -107,11 +107,7 @@
 \**********************************************************************************************/
 
 #include "cudaSift.h"
-
 #include "saiga/cuda/device_helper.h"
-
-
-
 
 namespace cudasift {
 
@@ -119,7 +115,6 @@ void SIFTGPU::buildGaussianPyramid(){
 #ifdef SIFT_PRINT_TIMINGS
     Saiga::CUDA::CudaScopedTimerPrint tim("SIFTGPU::buildGaussianPyramid");
 #endif
-
 
     for(int o = 0; o < numOctaves; ++o)
     {
@@ -129,12 +124,9 @@ void SIFTGPU::buildGaussianPyramid(){
             if(o == 0 && i == 0){
                 //the first image is set from previous function
             }else if(i == 0){
-                //Note: this is super fast
                 auto& src = gaussianPyramid2[ (o-1) * (nOctaveLayers + 3) + nOctaveLayers];
                 Saiga::CUDA::scaleDown2EveryOther(src,dst);
             }else{
-                //Note: this takes up all the time.
-                //75% of the time already in the first octave
                 auto& src = gaussianPyramid2[ o * (nOctaveLayers + 3) + (i-1)];
 #ifdef SIFT_SINGLE_PASS_BLUR
                 Saiga::CUDA::applyFilterSeparateSinglePass(src,dst,octaveBlurKernels[i]);
@@ -152,19 +144,13 @@ void SIFTGPU::buildGaussianPyramid(){
     }
 }
 
-
-
-
 void SIFTGPU::buildDoGPyramid(){
 #ifdef SIFT_PRINT_TIMINGS
     Saiga::CUDA::CudaScopedTimerPrint tim("SIFTGPU::buildDoGPyramid");
 #endif
 
-    SAIGA_ASSERT(dogPyramid2.size() == numOctaves*(nOctaveLayers + 2));
-
     for( int o = 0; o < numOctaves; o++ )
     {
-        //Note: pretty fast most of the time 1. and 2. octave
         auto src2 = Saiga::ImageArrayView<float>(gaussianPyramid2[o*(nOctaveLayers + 3)], nOctaveLayers + 3);
         auto dst2 = Saiga::ImageArrayView<float>(dogPyramid2[o*(nOctaveLayers + 2)], nOctaveLayers + 2);
         Saiga::CUDA::subtractMulti(src2,dst2);
