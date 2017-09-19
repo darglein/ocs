@@ -21,7 +21,7 @@ OCS is an open source GPU implemenation of SIFT feature detection and matching. 
 For all meassurements the median time of 50 executions was taken. Host-Device data transfers for example uploading the image for feature detection is not included. The test code can be found in src/test.cu and  is run by default.
 
 
-# Feature Detection
+### Feature Detection
 
 Sift Parameters:
 
@@ -40,7 +40,7 @@ Sift Parameters:
 | GTX 970 | 2.393 | 3.569| 4.639 | 8.513 |14.133 |
 | GTX 760 | 3.245 | 5.630 | 8.651 | 17.639 |31.302 |
 
-# Matching
+### Matching
 
 Bruteforce knn search with k=4 
 
