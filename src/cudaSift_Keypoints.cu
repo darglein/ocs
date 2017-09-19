@@ -153,20 +153,6 @@ void solveSymmetric(
     z *= div;
 }
 
-__device__ inline
-void loadBuffer(Saiga::ImageArrayView<float>& images, float buffer[3][3][3], int x, int y, int layer)
-{
-#pragma unroll
-    for(int i = 0; i < 3 * 3 * 3; ++i){
-        int dx = i % 3 - 1;
-        int dy = i / 3 % 3 - 1;
-        int dz = i / 3 / 3 % 3 - 1;
-        float v = images[layer+dz](y+dy,x+dx);
-        buffer[dx+1][dy+1][dz+1] = v;
-
-    }
-}
-
 template<unsigned int TILE_W, unsigned int TILE_H, unsigned int LAYERS>
 __device__ inline
 void loadBufferShared(float sbuffer[LAYERS + 2][TILE_H][TILE_W], float buffer[3][3][3], int x, int y, int layer)
@@ -180,7 +166,6 @@ void loadBufferShared(float sbuffer[LAYERS + 2][TILE_H][TILE_W], float buffer[3]
         buffer[dx+1][dy+1][dz+1] = v;
     }
 }
-
 
 template<unsigned int TILE_W, unsigned int TILE_H, unsigned int LAYERS>
 __device__ inline
@@ -207,7 +192,6 @@ int x_tile, int y_tile)
     }
 }
 
-
 __device__ inline
 void findMinMax(float buffer[3][3][3], float& minN, float& maxN)
 {
@@ -227,7 +211,6 @@ void findMinMax(float buffer[3][3][3], float& minN, float& maxN)
     }
 }
 
-
 __device__ inline
 void derive(float buffer[3][3][3], float3& dD)
 {
@@ -238,8 +221,6 @@ void derive(float buffer[3][3][3], float3& dD)
     dD.y = (buffer[1][2][1] - buffer[1][0][1]) * deriv_scale;
     dD.z = (buffer[1][1][2] - buffer[1][1][0]) * deriv_scale;
 }
-
-
 
 __device__ inline
 void deriveSecond(float buffer[3][3][3], float derivs2[6])
@@ -263,7 +244,7 @@ void deriveSecond(float buffer[3][3][3], float derivs2[6])
 
 template<unsigned int TILE_W, unsigned int TILE_H, unsigned int LAYERS>
 __global__ static
-__launch_bounds__(TILE_W*TILE_H,3)
+__launch_bounds__(TILE_W*TILE_H,3) //make sure nvcc reduces register usage to atleast 75% occupancy
 void d_FindPointsMulti4(
         Saiga::ImageArrayView<float> images,
         Saiga::array_view<SiftPoint> keypoints,
@@ -382,8 +363,6 @@ void d_FindPointsMulti4(
             //reload buffer
             lx = x - x_tile;
             ly = y - y_tile;
-
-            loadBuffer(images,buffer[bufferOffset],x,y,layer);
             loadBufferSharedMixed<TILE_W,TILE_H,LAYERS>(images,sbuffer,buffer[bufferOffset],lx,ly,layer,x_tile,y_tile);
         }
 
@@ -421,8 +400,8 @@ void d_FindPointsMulti4(
         unsigned int idx = atomicInc(pointCounter, 0x7fffffff);
         if(idx < maxFeatures)
         {
-            SiftPoint& sp = keypoints[idx];
-            //                                            SiftPoint sp;
+            //SiftPoint& sp = keypoints[idx];
+            SiftPoint sp;
             sp.ixpos = x;
             sp.iypos = y;
             sp.xpos = (x + xc)  * (1 << octave);
@@ -431,7 +410,7 @@ void d_FindPointsMulti4(
             sp.size = sigma * powf(2.f, float(layer + xi) / LAYERS)*(1 << octave) * 2;
             sp.response = fabsf(contr);
             sp.orientation = 0;
-            //                            Saiga::CUDA::vectorCopy(&sp, keypoints.data() + idx);
+            Saiga::CUDA::vectorCopy(&sp, keypoints.data() + idx);
         }else{
             atomicDec(pointCounter, 0x7fffffff);
         }
