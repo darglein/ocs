@@ -107,15 +107,10 @@
 \**********************************************************************************************/
 
 #include "cudaSift.h"
-
-#if defined(HAS_SAIGA)
 #include "saiga/cuda/device_helper.h"
-#else
-#endif
-
-
 
 namespace cudasift {
+
 SIFTGPU::SIFTGPU(int imageWidth, int imageHeight, bool doubleScale, int maxOctaves,
                  int _nfeatures, int _nOctaveLayers,
                  double _contrastThreshold, double _edgeThreshold, double _sigma )
@@ -128,11 +123,6 @@ SIFTGPU::SIFTGPU(int imageWidth, int imageHeight, bool doubleScale, int maxOctav
 }
 
 SIFTGPU::~SIFTGPU(){
-
-    //    CHECK_CUDA_ERROR(cudaFree(memorydogpyramid));
-    //    CHECK_CUDA_ERROR(cudaFree(memorygpyramid));
-    //    memorydogpyramid = 0;
-    //    memorygpyramid = 0;
 }
 
 void SIFTGPU::initMemory()
@@ -185,7 +175,6 @@ void SIFTGPU::initMemory()
     tmpImages.resize(numOctaves);
 #endif
 
-
     size_t ps = 0;
     size_t dps = 0;
 #ifndef SIFT_SINGLE_PASS_BLUR
@@ -214,14 +203,11 @@ void SIFTGPU::initMemory()
                                         thrust::raw_pointer_cast(memoryTmp.data())+tmps);
         tmps += imageSize;
 #endif
-
         w /= 2;
         h /= 2;
     }
 
-
     createKernels();
-
     initialized = true;
     CUDA_SYNC_CHECK_ERROR();
 }
@@ -234,7 +220,6 @@ void SIFTGPU::createKernels(){
         float sig_diff = sqrtf( std::max<double>(sigma * sigma - SIFT_INIT_SIGMA * SIFT_INIT_SIGMA * 4, 0.01f) );
         initialBlurKernel = Saiga::CUDA::createGaussianBlurKernel(GAUSSIAN_KERNEL_RADIUS,sig_diff);
     }
-
 
     std::vector<double> sig(nOctaveLayers + 3);
     // precompute Gaussian sigmas using the following formula:

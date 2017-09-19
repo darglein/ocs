@@ -111,34 +111,25 @@
 #include "saiga/cuda/imageProcessing/imageProcessing.h"
 #include "saiga/cuda/imageProcessing/image.h"
 
-
 #include "sift_defines.h"
 
 #ifdef SIFT_DEBUG
 #include "saiga/opencv/opencv.h"
 #endif
 
-using std::cout;
-using std::endl;
 
 namespace cudasift {
 
-
-
-
 using Saiga::ImageView;
 
-
 //size = 8 * sizeof(int) = 32 bytes
-struct __attribute__((aligned(32))) SiftPoint {
-
+struct SAIGA_ALIGN(32) SiftPoint {
     //output position with subpixel accuracy
     float xpos;
     float ypos;
     //local pixel position in the current octave
     int ixpos;
     int iypos;
-
     //see cv::Keypoint for more details
     int octave;
     float size;
@@ -146,7 +137,7 @@ struct __attribute__((aligned(32))) SiftPoint {
     float response;
 
     HD inline
-    void unpackOctave(int& octave, int& layer, float& scale)
+            void unpackOctave(int& octave, int& layer, float& scale)
     {
         octave = this->octave & 255;
         layer = (this->octave >> 8) & 255;
@@ -155,7 +146,7 @@ struct __attribute__((aligned(32))) SiftPoint {
     }
 
     HD inline
-    void packOctave(int octave, int layer){
+            void packOctave(int octave, int layer){
         this->octave = octave + (layer << 8);
     }
 };
@@ -171,9 +162,9 @@ public:
             double sigma = 1.6);
 
     ~SIFTGPU();
-
     void initMemory();
     int compute(ImageView<float> img, Saiga::array_view<SiftPoint> keypoints, Saiga::array_view<float> descriptors);
+
 private:
     void createKernels();
     void createInitialImage(ImageView<float> src, ImageView<float> dst, ImageView<float> tmp);
@@ -188,7 +179,6 @@ private:
     std::vector<ImageView<float>> gaussianPyramid2;
     std::vector<ImageView<float>> dogPyramid2;
 
-
     thrust::device_vector<unsigned int> pointCounter;
     thrust::device_vector<float> initialBlurKernel;
     std::vector<thrust::device_vector<float>> octaveBlurKernels;
@@ -197,10 +187,10 @@ private:
     thrust::device_vector<uint8_t> memorydogpyramid;
 
 #ifndef SIFT_SINGLE_PASS_BLUR
-    thrust::device_vector<uint8_t> memoryTmp; //for gaussian blur
+    //tmp memory for 2 pass separate blur.
+    thrust::device_vector<uint8_t> memoryTmp;
     std::vector<ImageView<float>> tmpImages;
 #endif
-
 
     int numOctaves;
     int imageWidth;
