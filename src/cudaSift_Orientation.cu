@@ -260,7 +260,7 @@ __global__ void ComputeOrientationWarp(
             float bin = j + 0.5f * (hist[leftBin]-hist[rightBin]) / (hist[leftBin] - 2*hist[j] + hist[rightBin]);
             bin = bin < 0 ? n + bin : bin >= n ? bin - n : bin;
             float angle = 360.f - (float)((360.f/n) * bin);
-            if(fabsf(angle - 360.f) < __FLT_EPSILON__)
+            if(fabsf(angle - 360.f) < SIFT_FLT_EPSILON)
                 angle = 0.f;
 
             CUDA_ASSERT(angle >= 0 && angle <= 360);

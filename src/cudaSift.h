@@ -118,6 +118,9 @@
 #endif
 
 
+#define SIFT_FLT_EPSILON     1.192092896e-07F
+#define SIFT_PI     3.14159265358979323846
+
 namespace cudasift {
 
 using Saiga::ImageView;

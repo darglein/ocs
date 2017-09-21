@@ -106,8 +106,6 @@
 //    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \**********************************************************************************************/
 
-#define _USE_MATH_DEFINES
-#include <math.h>
 #include "cudaSift.h"
 
 #include "saiga/cuda/device_helper.h"
@@ -137,8 +135,8 @@ void calcSIFTDescriptorBlock( ImageView<float> d_img,
         hist_width = MAX_RADIUS / (1.4142135623730951f * (d + 1) * 0.5f);
     }
 
-    float cos_t = cosf(ori*(float)(M_PI/180));
-    float sin_t = sinf(ori*(float)(M_PI/180));
+	float cos_t = cosf(ori*(float)(SIFT_PI / 180));
+	float sin_t = sinf(ori*(float)(SIFT_PI / 180));
     cos_t /= hist_width;
     sin_t /= hist_width;
 
@@ -317,7 +315,7 @@ void calcSIFTDescriptorBlock( ImageView<float> d_img,
 
 
 
-    nrm2 = SIFT_INT_DESCR_FCTR/max(sqrtf(nrm2), __FLT_EPSILON__);
+	nrm2 = SIFT_INT_DESCR_FCTR / max(sqrtf(nrm2), SIFT_FLT_EPSILON);
 
     {
         dst[local_thread_id] = dst[local_thread_id]*nrm2;
@@ -367,9 +365,8 @@ __global__ void calcSIFTDescriptorsBlock(
 
 
     float angle = 360.0f - sp.orientation;
-    if(fabsf(angle - 360.f) < __FLT_EPSILON__)
+	if (fabsf(angle - 360.f) < SIFT_FLT_EPSILON)
         angle = 0.f;
-
 
 
     int octave, layer;
