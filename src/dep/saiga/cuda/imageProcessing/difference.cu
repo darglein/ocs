@@ -14,7 +14,7 @@ namespace CUDA {
 
 template<int BLOCK_W, int BLOCK_H, int ROWS_PER_THREAD = 1>
 __global__
-static void d_subtract(ImageView<float> src1, ImageView<float> src2, ImageView<float> dst)
+static void d_subtract(SiftImageType src1, SiftImageType src2, SiftImageType dst)
 {
     int tx = threadIdx.x;
     int ty = threadIdx.y;
@@ -23,26 +23,26 @@ static void d_subtract(ImageView<float> src1, ImageView<float> src2, ImageView<f
     int y = blockIdx.y * (BLOCK_H*ROWS_PER_THREAD) + ty;
 
 
-    if(x >= dst.width)
+    if(x >= dst.cols)
         return;
 
 #pragma unroll
     for(int i = 0; i < ROWS_PER_THREAD; ++i, y += BLOCK_H){
-        if(y < dst.height){
+        if(y < dst.rows){
             dst(y,x) = src1(y,x) - src2(y,x);
         }
     }
 }
 
 
-void subtract(ImageView<float> src1, ImageView<float> src2, ImageView<float> dst){
-    SAIGA_ASSERT(src1.width == dst.width && src1.height == dst.height);
+void subtract(SiftImageType src1, SiftImageType src2, SiftImageType dst){
+    SAIGA_ASSERT(src1.cols == dst.cols && src1.rows == dst.rows);
 
     const int ROWS_PER_THREAD = 2;
     const int BLOCK_W = 128;
     const int BLOCK_H = 1;
-    int w = dst.width;
-    int h = dst.height;//iDivUp(dst.height,ROWS_PER_THREAD);
+    int w = dst.cols;
+    int h = dst.rows;//iDivUp(dst.rows,ROWS_PER_THREAD);
     dim3 blocks(iDivUp(w, BLOCK_W), iDivUp(h, BLOCK_H * ROWS_PER_THREAD));
     dim3 threads(BLOCK_W, BLOCK_H);
     d_subtract<BLOCK_W,BLOCK_H,ROWS_PER_THREAD> <<<blocks, threads>>>(src1,src2,dst);
@@ -60,7 +60,7 @@ __global__ void d_subtractMulti(
     int x = blockIdx.x * BLOCK_W + tx;
     int ys = blockIdx.y * (BLOCK_H*ROWS_PER_THREAD) + ty;
 
-    int height = dst.imgStart.height;
+    int height = dst.imgStart.rows;
 
     if(!src.imgStart.inImage(ys,x))
         return;
@@ -90,14 +90,14 @@ __global__ void d_subtractMulti(
 }
 
 void subtractMulti(ImageArrayView<float> src, ImageArrayView<float> dst){
-    //    SAIGA_ASSERT(src1.width == dst.width && src1.height == dst.height);
+    //    SAIGA_ASSERT(src1.cols == dst.cols && src1.rows == dst.rows);
 
     SAIGA_ASSERT(src.n == dst.n + 1);
     const int ROWS_PER_THREAD = 2;
     const int BLOCK_W = 128;
     const int BLOCK_H = 1;
-    int w = dst[0].width;
-    int h = dst[0].height;
+    int w = dst[0].cols;
+    int h = dst[0].rows;
     dim3 blocks(iDivUp(w, BLOCK_W), iDivUp(h, BLOCK_H * ROWS_PER_THREAD));
     dim3 threads(BLOCK_W, BLOCK_H);
     d_subtractMulti<float,BLOCK_W,BLOCK_H,ROWS_PER_THREAD> <<<blocks, threads>>>(src,dst);

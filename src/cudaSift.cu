@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Copyright (c) 2017 Darius Rückert
  * Licensed under the MIT License.
  * See LICENSE file for more information.
@@ -112,6 +112,28 @@
 
 namespace cudasift {
 
+void buildGaussianPyramid(std::vector<SiftImageType>& gaussianPyramid2,
+                          int nOctaveLayers, int numOctaves,
+                          std::vector<thrust::device_vector<float>>& octaveBlurKernels);
+
+void buildDoGPyramid(std::vector<SiftImageType>& gaussianPyramid2,
+                     std::vector<SiftImageType>& dogPyramid2,
+                                             int nOctaveLayers, int numOctaves);
+
+void FindPointsMulti(Saiga::array_view<SiftPoint> keypoints, Saiga::ImageArrayView<float> images,
+                     unsigned int* pointCounter,
+                     float contrastThreshold, float edgeThreshold, int octave, int layers, float sigma, int maxFeatures);
+
+
+void ComputeOrientationMulti(Saiga::array_view<SiftPoint> keypoints, Saiga::ImageArrayView<float> images,
+                             int start, int length,
+                             unsigned int* pointCounter,
+                             int nOctaveLayers, float sigma, int nfeatures);
+
+void descriptorsMulti(Saiga::array_view<SiftPoint> keypoints, Saiga::array_view<float> descriptors, Saiga::ImageArrayView<float> images,
+                      int start, int length);
+
+
 __global__
 void d_scaleDownKeypoints(Saiga::array_view<SiftPoint> keypoints)
 {
@@ -135,14 +157,14 @@ static void scaleDownKeypoints(Saiga::array_view<SiftPoint> keypoints){
 }
 
 
-int SIFTGPU::compute(ImageView<float> d_img, Saiga::array_view<SiftPoint> keypoints, Saiga::array_view<float> descriptors) {
+int SIFT_CUDA::compute(SiftImageType d_img, Saiga::array_view<SiftPoint> keypoints, Saiga::array_view<float> descriptors) {
     initMemory();
 #ifdef SIFT_PRINT_TIMINGS
-    Saiga::CUDA::CudaScopedTimerPrint tim("SIFTGPU::compute");
+    Saiga::CUDA::CudaScopedTimerPrint tim("SIFT_CUDA::compute");
 #endif
     createInitialImage(d_img,gaussianPyramid2[0],gaussianPyramid2[1]);
-    buildGaussianPyramid();
-    buildDoGPyramid();
+    buildGaussianPyramid(gaussianPyramid2,nOctaveLayers,numOctaves,octaveBlurKernels);
+    buildDoGPyramid(gaussianPyramid2,dogPyramid2,nOctaveLayers,numOctaves);
     int n = findScaleSpaceExtrema(keypoints,descriptors);
     if( doubleScale ){
         scaleDownKeypoints(keypoints);
@@ -154,13 +176,13 @@ int SIFTGPU::compute(ImageView<float> d_img, Saiga::array_view<SiftPoint> keypoi
 
 
 
-void SIFTGPU::createInitialImage(ImageView<float> src, ImageView<float> dst, ImageView<float> tmp){
+void SIFT_CUDA::createInitialImage(SiftImageType src, SiftImageType dst, SiftImageType tmp){
 #ifdef SIFT_DEBUG
-    cout << "createInitialImage. lowimg: " << dst.width << "x" << dst.height << " img: " << src.width << "x" << src.height << " sigma: " << sigma << endl;
+    cout << "createInitialImage. lowimg: " << dst.cols << "x" << dst.rows << " img: " << src.cols << "x" << src.rows << " sigma: " << sigma << endl;
 #endif
 
 #ifdef SIFT_PRINT_TIMINGS
-    Saiga::CUDA::CudaScopedTimerPrint tim("SIFTGPU::createInitialImage");
+    Saiga::CUDA::CudaScopedTimerPrint tim("SIFT_CUDA::createInitialImage");
 #endif
 
     if (!doubleScale) {
@@ -174,7 +196,7 @@ void SIFTGPU::createInitialImage(ImageView<float> src, ImageView<float> dst, Ima
 #ifdef SIFT_DEBUG
     {
         cv::Mat cpumat = Saiga::ImageViewToMat(dst);
-        Saiga::CUDA::copyImage(dst,Saiga::MatToImageView<float>(cpumat),cudaMemcpyDeviceToHost);
+        Saiga::CUDA::copyImage(dst,Saiga::MatToSiftImageType(cpumat),cudaMemcpyDeviceToHost);
         cv::imwrite("out/init_sift_img_blurred_gpu.jpg",cpumat);
     }
 #endif
@@ -183,10 +205,10 @@ void SIFTGPU::createInitialImage(ImageView<float> src, ImageView<float> dst, Ima
 }
 
 
-int SIFTGPU::findScaleSpaceExtrema(Saiga::array_view<SiftPoint> keypoints, Saiga::array_view<float> descriptors)
+int SIFT_CUDA::findScaleSpaceExtrema(Saiga::array_view<SiftPoint> keypoints, Saiga::array_view<float> descriptors)
 {
 #ifdef SIFT_PRINT_TIMINGS
-    Saiga::CUDA::CudaScopedTimerPrint tim("SIFTGPU extrema detection + descriptors");
+    Saiga::CUDA::CudaScopedTimerPrint tim("SIFT_CUDA extrema detection + descriptors");
 #endif
 
 
@@ -203,7 +225,7 @@ int SIFTGPU::findScaleSpaceExtrema(Saiga::array_view<SiftPoint> keypoints, Saiga
 #endif
 
         auto dst2 = Saiga::ImageArrayView<float>(dogPyramid2[o*(nOctaveLayers + 2)], nOctaveLayers + 2);
-        FindPointsMulti(keypoints,dst2,o);
+        FindPointsMulti(keypoints,dst2,thrust::raw_pointer_cast(pointCounter.data()),contrastThreshold,edgeThreshold,o,nOctaveLayers,sigma,nfeatures);
 
         n = pointCounter[0];
         int newPoints = n - pointsBefore;
@@ -214,7 +236,7 @@ int SIFTGPU::findScaleSpaceExtrema(Saiga::array_view<SiftPoint> keypoints, Saiga
 #endif
         if(newPoints > 0){
             auto img2 = Saiga::ImageArrayView<float>(gaussianPyramid2[o*(nOctaveLayers + 3)], nOctaveLayers + 3);
-            ComputeOrientationMulti(keypoints,img2,pointsBefore,newPoints);
+            ComputeOrientationMulti(keypoints,img2,pointsBefore,newPoints,thrust::raw_pointer_cast(pointCounter.data()),nOctaveLayers,sigma,nfeatures);
             n = pointCounter[0];
             newPoints = n - pointsBefore;
             descriptorsMulti(keypoints,descriptors,img2,pointsBefore,newPoints);

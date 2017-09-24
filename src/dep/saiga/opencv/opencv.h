@@ -37,7 +37,7 @@ cv::Mat ImageViewToMat(ImageView<T> img){
     if(typeid(T) == typeid(uchar4))type = CV_8UC4;
 #endif
     if(typeid(T) == typeid(float))type = CV_32FC1;
-    return cv::Mat(img.height,img.width,type);
+    return cv::Mat(img.rows,img.cols,type);
 }
 
 

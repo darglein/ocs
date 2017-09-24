@@ -91,8 +91,8 @@ void d_convolveOuterLinear(ImageView<T> src, ImageView<T> dst)
 template<typename T, int RADIUS>
 inline
 void convolveOuterLinear(ImageView<T> src, ImageView<T> dst){
-    int w = src.width;
-    int h = src.height;
+    int w = src.cols;
+    int h = src.rows;
 
     const int BLOCK_W = 32;
     const int BLOCK_H = 16;
@@ -244,8 +244,8 @@ void d_convolveOuterHalo(ImageView<T> src, ImageView<T> dst)
 template<typename T, int RADIUS>
 inline
 void convolveOuterHalo(ImageView<T> src, ImageView<T> dst){
-    int w = src.width;
-    int h = src.height;
+    int w = src.cols;
+    int h = src.rows;
 
     const int BLOCK_W = 32;
     const int BLOCK_H = 16;
@@ -377,8 +377,8 @@ void d_convolveInner(ImageView<T> src, ImageView<T> dst)
 template<typename T, int RADIUS, bool LOW_OCC = false>
 inline
 void convolveInner(ImageView<T> src, ImageView<T> dst){
-    int w = src.width;
-    int h = src.height;
+    int w = src.cols;
+    int h = src.rows;
 
 
     const int BLOCK_W = LOW_OCC ? 64 : 32;
@@ -398,7 +398,7 @@ void convolveInner(ImageView<T> src, ImageView<T> dst){
 
 
 
-void convolveSinglePassSeparateOuterLinear(ImageView<float> src, ImageView<float> dst, Saiga::array_view<float> kernel, int radius){
+void convolveSinglePassSeparateOuterLinear(SiftImageType src, SiftImageType dst, Saiga::array_view<float> kernel, int radius){
     CHECK_CUDA_ERROR(cudaMemcpyToSymbol(d_Kernel, kernel.data(), kernel.size()*sizeof(float),0,cudaMemcpyDeviceToDevice));
     switch (radius){
     case 1: CUDA::convolveOuterLinear<float,1>(src,dst); break;
@@ -413,7 +413,7 @@ void convolveSinglePassSeparateOuterLinear(ImageView<float> src, ImageView<float
     }
 }
 
-void convolveSinglePassSeparateOuterHalo(ImageView<float> src, ImageView<float> dst, Saiga::array_view<float> kernel, int radius){
+void convolveSinglePassSeparateOuterHalo(SiftImageType src, SiftImageType dst, Saiga::array_view<float> kernel, int radius){
     CHECK_CUDA_ERROR(cudaMemcpyToSymbol(d_Kernel, kernel.data(), kernel.size()*sizeof(float),0,cudaMemcpyDeviceToDevice));
     switch (radius){
     case 1: CUDA::convolveOuterHalo<float,1>(src,dst); break;
@@ -427,7 +427,7 @@ void convolveSinglePassSeparateOuterHalo(ImageView<float> src, ImageView<float> 
     }
 }
 
-void convolveSinglePassSeparateInner(ImageView<float> src, ImageView<float> dst, Saiga::array_view<float> kernel, int radius){
+void convolveSinglePassSeparateInner(SiftImageType src, SiftImageType dst, Saiga::array_view<float> kernel, int radius){
     CHECK_CUDA_ERROR(cudaMemcpyToSymbol(d_Kernel, kernel.data(), kernel.size()*sizeof(float),0,cudaMemcpyDeviceToDevice));
     switch (radius){
     case 1: CUDA::convolveInner<float,1>(src,dst); break;
@@ -442,7 +442,7 @@ void convolveSinglePassSeparateInner(ImageView<float> src, ImageView<float> dst,
 }
 
 
-void convolveSinglePassSeparateInner75(ImageView<float> src, ImageView<float> dst, Saiga::array_view<float> kernel, int radius){
+void convolveSinglePassSeparateInner75(SiftImageType src, SiftImageType dst, Saiga::array_view<float> kernel, int radius){
     CHECK_CUDA_ERROR(cudaMemcpyToSymbol(d_Kernel, kernel.data(), kernel.size()*sizeof(float),0,cudaMemcpyDeviceToDevice));
     switch (radius){
     case 1: CUDA::convolveInner<float,1,true>(src,dst); break;

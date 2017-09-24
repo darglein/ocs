@@ -63,7 +63,7 @@ __constant__ float d_Kernel[SAIGA_MAX_KERNEL_SIZE];
 
 
 template <int KSIZE>
-__global__ void linearRowFilter(ImageView<float> src, ImageView<float> dst, const int anchor)
+__global__ void linearRowFilter(SiftImageType src, SiftImageType dst, const int anchor)
 {
     const int BLOCK_DIM_X = 32;
     const int BLOCK_DIM_Y = 8;
@@ -77,7 +77,7 @@ __global__ void linearRowFilter(ImageView<float> src, ImageView<float> dst, cons
 
     const int y = blockIdx.y * BLOCK_DIM_Y + threadIdx.y;
 
-    if (y >= src.height)
+    if (y >= src.rows)
         return;
 
 
@@ -120,13 +120,13 @@ __global__ void linearRowFilter(ImageView<float> src, ImageView<float> dst, cons
 #pragma unroll
         for (int j = 0; j < PATCH_PER_BLOCK; ++j)
             //            smem[threadIdx.y][threadIdx.x + HALO_SIZE * BLOCK_DIM_X + j * BLOCK_DIM_X] = brd.at_high(xStart + j * BLOCK_DIM_X, src_row);
-            smem[threadIdx.y][threadIdx.x + HALO_SIZE * BLOCK_DIM_X + j * BLOCK_DIM_X] = src_row[min(xStart + j * BLOCK_DIM_X,src.width-1)];
+            smem[threadIdx.y][threadIdx.x + HALO_SIZE * BLOCK_DIM_X + j * BLOCK_DIM_X] = src_row[min(xStart + j * BLOCK_DIM_X,src.cols-1)];
 
         //Load right halo
 #pragma unroll
         for (int j = 0; j < HALO_SIZE; ++j)
             //            smem[threadIdx.y][threadIdx.x + (PATCH_PER_BLOCK + HALO_SIZE) * BLOCK_DIM_X + j * BLOCK_DIM_X] = brd.at_high(xStart + (PATCH_PER_BLOCK + j) * BLOCK_DIM_X, src_row);
-            smem[threadIdx.y][threadIdx.x + (PATCH_PER_BLOCK + HALO_SIZE) * BLOCK_DIM_X + j * BLOCK_DIM_X] = src_row[min(xStart + (PATCH_PER_BLOCK + j) * BLOCK_DIM_X,src.width-1)];
+            smem[threadIdx.y][threadIdx.x + (PATCH_PER_BLOCK + HALO_SIZE) * BLOCK_DIM_X + j * BLOCK_DIM_X] = src_row[min(xStart + (PATCH_PER_BLOCK + j) * BLOCK_DIM_X,src.cols-1)];
     }
 
     __syncthreads();
@@ -136,7 +136,7 @@ __global__ void linearRowFilter(ImageView<float> src, ImageView<float> dst, cons
     {
         const int x = xStart + j * BLOCK_DIM_X;
 
-        if (x < src.width)
+        if (x < src.cols)
         {
             sum_t sum = 0;
 
@@ -150,20 +150,20 @@ __global__ void linearRowFilter(ImageView<float> src, ImageView<float> dst, cons
 }
 
 template<typename T, int RADIUS>
-static void convolveRow(ImageView<float> src, ImageView<float> dst){
+static void convolveRow(SiftImageType src, SiftImageType dst){
     const int BLOCK_W = 32;
     const int  BLOCK_H = 8;
     const int PATCH_PER_BLOCK = 4;
 
     const dim3 block(BLOCK_W, BLOCK_H);
-    const dim3 grid(iDivUp(src.width, BLOCK_W * PATCH_PER_BLOCK), iDivUp(src.height, BLOCK_H));
+    const dim3 grid(iDivUp(src.cols, BLOCK_W * PATCH_PER_BLOCK), iDivUp(src.rows, BLOCK_H));
 
     const int ksize = RADIUS*2+1;
     int anchor = ksize >> 1;
     linearRowFilter<ksize><<<grid, block>>>(src, dst, anchor);
 }
 
-void convolveRow(ImageView<float> src, ImageView<float> dst, Saiga::array_view<float> kernel, int radius){
+void convolveRow(SiftImageType src, SiftImageType dst, Saiga::array_view<float> kernel, int radius){
     SAIGA_ASSERT(kernel.size() > 0 && kernel.size() <= SAIGA_MAX_KERNEL_SIZE);
     CHECK_CUDA_ERROR(cudaMemcpyToSymbol(d_Kernel, kernel.data(), kernel.size()*sizeof(float),0,cudaMemcpyDeviceToDevice));
 

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Copyright (c) 2017 Darius Rückert
  * Licensed under the MIT License.
  * See LICENSE file for more information.
@@ -111,26 +111,26 @@
 
 namespace cudasift {
 
-SIFTGPU::SIFTGPU(int imageWidth, int imageHeight, bool doubleScale, int maxOctaves,
+SIFT_CUDA::SIFT_CUDA(int imageWidth, int imageHeight, bool doubleScale, int maxOctaves,
                  int _nfeatures, int _nOctaveLayers,
                  double _contrastThreshold, double _edgeThreshold, double _sigma )
     : imageWidth(imageWidth),imageHeight(imageHeight),doubleScale(doubleScale),
-      nfeatures(_nfeatures),nOctaveLayers(_nOctaveLayers),contrastThreshold(_contrastThreshold),edgeThreshold(_edgeThreshold),sigma(_sigma)
+      nfeatures(_nfeatures),nOctaveLayers(_nOctaveLayers),contrastThreshold(_contrastThreshold),edgeThreshold(_edgeThreshold),sigma(_sigma),initialized(false)
 {
     numOctaves =  Saiga::iRound(std::log( (double)std::min( imageWidth, imageHeight ) ) / std::log(2.) - 2) + 1;
     if(maxOctaves > 0)
         numOctaves = std::min(numOctaves,maxOctaves);
 }
 
-SIFTGPU::~SIFTGPU(){
+SIFT_CUDA::~SIFT_CUDA(){
 }
 
-void SIFTGPU::initMemory()
+void SIFT_CUDA::initMemory()
 {
     if(initialized)
         return;
 #ifdef SIFT_PRINT_TIMINGS
-    Saiga::CUDA::CudaScopedTimerPrint tim("SIFTGPU::initMemory");
+    Saiga::CUDA::CudaScopedTimerPrint tim("SIFT_CUDA::initMemory");
 #endif
 
     gaussianPyramid2.resize(numOctaves * (nOctaveLayers + 3));
@@ -186,20 +186,20 @@ void SIFTGPU::initMemory()
 
         for(int j = 0; j < nOctaveLayers + 3 ; ++j){
             int index = o * (nOctaveLayers + 3) + j;
-            gaussianPyramid2[index] = ImageView<float>(h,w,pitch,
+            gaussianPyramid2[index] = SiftImageType(h,w,pitch,
                                                        thrust::raw_pointer_cast(memorygpyramid.data())+ps);
             ps += imageSize;
         }
 
         for(int j = 0; j < nOctaveLayers + 2 ; ++j){
             int index = o * (nOctaveLayers + 2) + j;
-            dogPyramid2[index] = ImageView<float>(h,w,pitch,
+            dogPyramid2[index] = SiftImageType(h,w,pitch,
                                                   thrust::raw_pointer_cast(memorydogpyramid.data())+dps);
             dps += imageSize;
         }
 
 #ifndef SIFT_SINGLE_PASS_BLUR
-        tmpImages[o] = ImageView<float>(h,w,pitch,
+        tmpImages[o] = SiftImageType(h,w,pitch,
                                         thrust::raw_pointer_cast(memoryTmp.data())+tmps);
         tmps += imageSize;
 #endif
@@ -212,7 +212,7 @@ void SIFTGPU::initMemory()
     CUDA_SYNC_CHECK_ERROR();
 }
 
-void SIFTGPU::createKernels(){
+void SIFT_CUDA::createKernels(){
     if (!doubleScale) {
         float sig_diff = sqrtf( std::max<double>(sigma * sigma - SIFT_INIT_SIGMA * SIFT_INIT_SIGMA, 0.01f) );
         initialBlurKernel = Saiga::CUDA::createGaussianBlurKernel(GAUSSIAN_KERNEL_RADIUS,sig_diff);

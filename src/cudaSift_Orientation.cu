@@ -115,7 +115,7 @@ namespace cudasift {
 
 // Computes a gradient orientation histogram at a specified pixel
 __device__
-static float calcOrientationHistWarp(  ImageView<float> d_img,
+static float calcOrientationHistWarp(  SiftImageType d_img,
                                        int px, int py, int RADIUS,
                                        float sigma, float* hist, float* temphist,
                                        unsigned int lane_id )
@@ -141,10 +141,10 @@ static float calcOrientationHistWarp(  ImageView<float> d_img,
         int y = py + i;
         int x = px + j;
 
-        if( x <= 0 || x >= d_img.width - 1 )
+        if( x <= 0 || x >= d_img.cols - 1 )
             continue;
 
-        if( y <= 0 || y >= d_img.height - 1 )
+        if( y <= 0 || y >= d_img.rows - 1 )
             continue;
 
         float dx = d_img(y,x+1) - d_img(y,x-1);
@@ -229,7 +229,7 @@ __global__ void ComputeOrientationWarp(
     float scale;
     sp.unpackOctave(octave,layer,scale);
 
-    ImageView<float> d_img = images[layer];
+    SiftImageType d_img = images[layer];
 
     //variable radius
     float size = sig*powf(2.f, float(layer) / nOctaveLayers)*(1 << octave)*2;
@@ -291,15 +291,20 @@ __global__ void ComputeOrientationWarp(
 
 
 
-void SIFTGPU::ComputeOrientationMulti(Saiga::array_view<SiftPoint> keypoints, Saiga::ImageArrayView<float> images, int start, int length){
+void ComputeOrientationMulti(
+        Saiga::array_view<SiftPoint> keypoints, Saiga::ImageArrayView<float> images,
+        int start, int length,
+        unsigned int* pointCounter,
+        int nOctaveLayers, float sigma, int nfeatures)
+{
 #ifdef SIFT_PRINT_TIMINGS
-    Saiga::CUDA::CudaScopedTimerPrint tim("  SIFTGPU::ComputeOrientationMulti");
+    Saiga::CUDA::CudaScopedTimerPrint tim("  SIFT_CUDA::ComputeOrientationMulti");
 #endif
 
     const int BLOCK_SIZE = 128;
     ComputeOrientationWarp<BLOCK_SIZE,SIFT_ORI_MAX_RADIUS><<<Saiga::iDivUp(length*WARP_SIZE, BLOCK_SIZE),BLOCK_SIZE>>>(images,
                                                                                                                        keypoints,
-                                                                                                                       thrust::raw_pointer_cast(pointCounter.data()),
+                                                                                                                      pointCounter,
                                                                                                                        start,length,nOctaveLayers,
                                                                                                                        sigma,nfeatures);
     CUDA_SYNC_CHECK_ERROR();

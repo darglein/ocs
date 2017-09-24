@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Copyright (c) 2017 Darius Rückert
  * Licensed under the MIT License.
  * See LICENSE file for more information.
@@ -108,13 +108,16 @@
 
 #pragma once
 
+
+#include "buildconfig.h"
 #include "saiga/cuda/imageProcessing/imageProcessing.h"
 #include "saiga/cuda/imageProcessing/image.h"
 
 #include "sift_defines.h"
 
-#ifdef SIFT_DEBUG
+#ifdef OCS_USE_OPENCV
 #include "saiga/opencv/opencv.h"
+#include "opencv2/core/cuda.hpp"
 #endif
 
 
@@ -123,7 +126,10 @@
 
 namespace cudasift {
 
-using Saiga::ImageView;
+using SiftImageType = Saiga::ImageView<float>;
+//using SiftImageType = cv::cuda::PtrStepSz<float>;
+
+//using Saiga::ImageView;
 
 //size = 8 * sizeof(int) = 32 bytes
 struct SAIGA_ALIGN(32) SiftPoint {
@@ -156,31 +162,36 @@ struct SAIGA_ALIGN(32) SiftPoint {
 
 
 
-class SIFTGPU{
+class SIFT_CUDA{
 public:
-    SIFTGPU(
+    SIFT_CUDA(
             int imageWidth, int imageHeight, bool doubleScale, int maxOctaves,
             int nfeatures = 0, int nOctaveLayers = 3,
             double contrastThreshold = 0.04, double edgeThreshold = 10,
             double sigma = 1.6);
 
-    ~SIFTGPU();
+    ~SIFT_CUDA();
     void initMemory();
-    int compute(ImageView<float> img, Saiga::array_view<SiftPoint> keypoints, Saiga::array_view<float> descriptors);
+    int compute(SiftImageType img, Saiga::array_view<SiftPoint> keypoints, Saiga::array_view<float> descriptors);
+
+#ifdef OCS_USE_OPENCV
+
+    //! download keypoints from device to host memory
+    void downloadKeypoints(Saiga::array_view<SiftPoint> keypointsGPU, std::vector<cv::KeyPoint>& keypoints);
+
+    //! download descriptors from device to host memory
+    void downloadDescriptors(Saiga::array_view<float> descriptorsGPU, std::vector<float>& descriptors);
+#endif
 
 private:
     void createKernels();
-    void createInitialImage(ImageView<float> src, ImageView<float> dst, ImageView<float> tmp);
-    void buildGaussianPyramid();
-    void buildDoGPyramid();
+    void createInitialImage(SiftImageType src, SiftImageType dst, SiftImageType tmp);
+
+
     int findScaleSpaceExtrema(Saiga::array_view<SiftPoint> keypoints, Saiga::array_view<float> descriptors);
-    void FindPointsMulti(Saiga::array_view<SiftPoint> keypoints, Saiga::ImageArrayView<float> images, int o);
-    void ComputeOrientationMulti(Saiga::array_view<SiftPoint> keypoints, Saiga::ImageArrayView<float> images, int start, int length);
-    void descriptorsMulti(Saiga::array_view<SiftPoint> keypoints, Saiga::array_view<float> descriptors, Saiga::ImageArrayView<float> images, int start, int length);
 
-
-    std::vector<ImageView<float>> gaussianPyramid2;
-    std::vector<ImageView<float>> dogPyramid2;
+    std::vector<SiftImageType> gaussianPyramid2;
+    std::vector<SiftImageType> dogPyramid2;
 
     thrust::device_vector<unsigned int> pointCounter;
     thrust::device_vector<float> initialBlurKernel;
@@ -192,7 +203,7 @@ private:
 #ifndef SIFT_SINGLE_PASS_BLUR
     //tmp memory for 2 pass separate blur.
     thrust::device_vector<uint8_t> memoryTmp;
-    std::vector<ImageView<float>> tmpImages;
+    std::vector<SiftImageType> tmpImages;
 #endif
 
     int numOctaves;
@@ -205,7 +216,10 @@ private:
     double edgeThreshold;
     double sigma;
 
-    bool initialized = false;
+    bool initialized;
 };
+
+
+
 
 }

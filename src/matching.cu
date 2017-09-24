@@ -15,7 +15,7 @@ namespace cudasift {
 template<unsigned int BLOCK_W2, unsigned int BLOCK_H, unsigned int LOCAL_WARP_W=1, unsigned int DESCRIPTOR_SIZE2=128>
 __global__ static
 __launch_bounds__(1024,2)
-void d_computeDistanceMatrix2(Saiga::ImageView<float> distances,
+void d_computeDistanceMatrix2(SiftImageType distances,
                               float *descY2, float *descX2)
 {
     const unsigned int BLOCK_W = BLOCK_W2 / LOCAL_WARP_W;
@@ -43,7 +43,7 @@ void d_computeDistanceMatrix2(Saiga::ImageView<float> distances,
         int descId = i / DESCRIPTOR_SIZE;
         int elId = i % DESCRIPTOR_SIZE;
         auto globalId = sx * DESCRIPTOR_SIZE + i;
-        siftPointsX[descId][elId] = globalId < distances.width*DESCRIPTOR_SIZE ? descX[globalId] : float2();
+        siftPointsX[descId][elId] = globalId < distances.cols*DESCRIPTOR_SIZE ? descX[globalId] : float2();
     }
 
 #pragma unroll
@@ -52,7 +52,7 @@ void d_computeDistanceMatrix2(Saiga::ImageView<float> distances,
         int descId = i / DESCRIPTOR_SIZE;
         int elId = i % DESCRIPTOR_SIZE;
         auto globalId = sy * DESCRIPTOR_SIZE + i;
-        siftPointsY[descId][elId] = globalId < distances.height*DESCRIPTOR_SIZE ? descY[globalId] : float2();
+        siftPointsY[descId][elId] = globalId < distances.rows*DESCRIPTOR_SIZE ? descY[globalId] : float2();
     }
 
     __syncthreads();
@@ -72,8 +72,8 @@ void d_computeDistanceMatrix2(Saiga::ImageView<float> distances,
     sum = Saiga::CUDA::warpReduceSum<float,LOCAL_WARP_W,false>(sum);
     sum = sqrtf(sum);
 
-    if (lane == 0 && y<distances.height){
-        distances(y,x) = (x<distances.width? sum : 45647431.0f);
+    if (lane == 0 && y<distances.rows){
+        distances(y,x) = (x<distances.cols? sum : 45647431.0f);
     }
 }
 
@@ -146,10 +146,10 @@ __device__ inline
 void warpReduceMinIndex(T& val, Ti& index) {
 #pragma unroll
     for (int offset = LOCAL_WARP_SIZE/2; offset > 0; offset /= 2){
-        auto v = RESULT_FOR_ALL_THREADS ? __shfl_xor(val, offset,LOCAL_WARP_SIZE) : __shfl_down(val, offset,LOCAL_WARP_SIZE);
-        auto i = RESULT_FOR_ALL_THREADS ? __shfl_xor(index, offset,LOCAL_WARP_SIZE) : __shfl_down(index, offset,LOCAL_WARP_SIZE);
-        //        auto v = RESULT_FOR_ALL_THREADS ? Saiga::CUDA::shfl_xor(val, offset) : Saiga::CUDA::shfl_down(val, offset);
-        //        auto i = RESULT_FOR_ALL_THREADS ? Saiga::CUDA::shfl_xor(index, offset) : Saiga::CUDA::shfl_down(index, offset);
+//        auto v = RESULT_FOR_ALL_THREADS ? __shfl_xor(val, offset,LOCAL_WARP_SIZE) : __shfl_down(val, offset,LOCAL_WARP_SIZE);
+//        auto i = RESULT_FOR_ALL_THREADS ? __shfl_xor(index, offset,LOCAL_WARP_SIZE) : __shfl_down(index, offset,LOCAL_WARP_SIZE);
+                auto v = RESULT_FOR_ALL_THREADS ? Saiga::CUDA::shfl_xor(val, offset) : Saiga::CUDA::shfl_down(val, offset);
+                auto i = RESULT_FOR_ALL_THREADS ? Saiga::CUDA::shfl_xor(index, offset) : Saiga::CUDA::shfl_down(index, offset);
         val = min(val , v);
         index = (v == val) ? i : index;
     }
@@ -162,7 +162,7 @@ template <typename T> HD inline void swap ( T& a, T& b )
 
 template<unsigned int THREADS_PER_BLOCK, unsigned int LOCAL_WARP_SIZE, unsigned int K>
 __global__ static
-void kmin( Saiga::ImageView<float> distances, float* outData, int* outIndices)
+void kmin( SiftImageType distances, float* outData, int* outIndices)
 {
     const int warps_per_block = THREADS_PER_BLOCK / LOCAL_WARP_SIZE;
 
@@ -175,7 +175,7 @@ void kmin( Saiga::ImageView<float> distances, float* outData, int* outIndices)
     int lane_id = local_thread_id & (LOCAL_WARP_SIZE-1);
     int y = tid / LOCAL_WARP_SIZE;
 
-    if(y >= distances.height)
+    if(y >= distances.rows)
         return;
 
     float minValues[K];
@@ -190,7 +190,7 @@ void kmin( Saiga::ImageView<float> distances, float* outData, int* outIndices)
         minValues[k] = 4326626;
     }
 
-    for (int i = lane_id; i < distances.width; i += LOCAL_WARP_SIZE)
+    for (int i = lane_id; i < distances.cols; i += LOCAL_WARP_SIZE)
     {
         int newIdx = i;
         float newval = distances(y,i);
@@ -284,17 +284,17 @@ void MatchGPU::computeDistanceMatrix(Saiga::array_view<float> descriptors1, Saig
         cudaFuncSetSharedMemConfig(d_computeDistanceMatrix2<BLOCK_W,BLOCK_H,LOCAL_WARP_W>,cudaSharedMemBankSizeEightByte);
 
         dim3 threads(BLOCK_W, BLOCK_H);
-        dim3 blocks(Saiga::iDivUp(distances.width,BLOCK_W/LOCAL_WARP_W), Saiga::iDivUp(distances.height, BLOCK_H));
+        dim3 blocks(Saiga::iDivUp(distances.cols,BLOCK_W/LOCAL_WARP_W), Saiga::iDivUp(distances.rows, BLOCK_H));
         d_computeDistanceMatrix2<BLOCK_W,BLOCK_H,LOCAL_WARP_W><<<blocks, threads>>>(distances,descriptors1.data(), descriptors2.data());
     }
     CUDA_SYNC_CHECK_ERROR();
 }
 
 template<int K>
-static void computeKNN2(Saiga::ImageView<float> distances, Saiga::array_view<float> out_distance, Saiga::array_view<int> out_index){
+static void computeKNN2(SiftImageType distances, Saiga::array_view<float> out_distance, Saiga::array_view<int> out_index){
     const int THREADS_PER_ROW = 32;
     const int BLOCK_SIZE = 128;
-    int blocks = Saiga::iDivUp(distances.height*THREADS_PER_ROW,BLOCK_SIZE);
+    int blocks = Saiga::iDivUp(distances.rows*THREADS_PER_ROW,BLOCK_SIZE);
     kmin<BLOCK_SIZE,THREADS_PER_ROW,K><<<blocks,BLOCK_SIZE>>>(distances,
                                                               thrust::raw_pointer_cast(out_distance.data()),
                                                               thrust::raw_pointer_cast(out_index.data())
@@ -333,8 +333,8 @@ void MatchGPU::knnMatch(Saiga::array_view<float> descriptors1, Saiga::array_view
     if (numPoints1 == 0 || numPoints2 == 0)
         return;
 
-    distances.height = numPoints1;
-    distances.width = numPoints2;
+    distances.rows = numPoints1;
+    distances.cols = numPoints2;
 
     SAIGA_ASSERT(out_distance.size() >= numPoints1 * k);
 
@@ -351,7 +351,7 @@ void MatchGPU::knnMatch(Saiga::array_view<float> descriptors1, Saiga::array_view
 template<unsigned int THREADS_PER_BLOCK, unsigned int LOCAL_WARP_SIZE>
 __global__ static
 void d_filterByRadius(Saiga::array_view<SiftPoint> keypoints1, Saiga::array_view<SiftPoint> keypoints2,
-                      Saiga::ImageView<float> distances,
+                      SiftImageType distances,
                       float radius)
 {
     int local_thread_id = threadIdx.x;
@@ -363,13 +363,13 @@ void d_filterByRadius(Saiga::array_view<SiftPoint> keypoints1, Saiga::array_view
 
     int y = warp_id;
 
-    if(y >= distances.height)
+    if(y >= distances.rows)
         return;
 
     float r2 = radius * radius;
     float2 pos = reinterpret_cast<float2*>((keypoints1.data()+y))[0];
 
-    for(int i = lane_id; i < distances.width; i += LOCAL_WARP_SIZE)
+    for(int i = lane_id; i < distances.cols; i += LOCAL_WARP_SIZE)
     {
         static_assert(sizeof(SiftPoint) == 32, "siftpoint size");
         float2 pos2 = reinterpret_cast<float2*>((keypoints2.data()+i))[0];
@@ -388,7 +388,7 @@ void MatchGPU::filterByRadius(Saiga::array_view<SiftPoint> keypoints1, Saiga::ar
 #endif
     const int THREADS_PER_ROW = 32;
     const int BLOCK_SIZE = 128;
-    int blocks = Saiga::iDivUp(distances.height*THREADS_PER_ROW,BLOCK_SIZE);
+    int blocks = Saiga::iDivUp(distances.rows*THREADS_PER_ROW,BLOCK_SIZE);
     d_filterByRadius<BLOCK_SIZE,THREADS_PER_ROW><<<blocks,BLOCK_SIZE>>>(keypoints1,keypoints2,distances,r);
     CUDA_SYNC_CHECK_ERROR();
 }
@@ -400,8 +400,8 @@ void MatchGPU::radiusMatch(Saiga::array_view<SiftPoint> keypoints1, Saiga::array
     if (numPoints1 == 0 || numPoints2 == 0)
         return;
 
-    distances.height = numPoints1;
-    distances.width = numPoints2;
+    distances.rows = numPoints1;
+    distances.cols = numPoints2;
 
     SAIGA_ASSERT(out_distance.size() >= numPoints1 * k);
 

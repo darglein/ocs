@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Copyright (c) 2017 Darius Rückert
  * Licensed under the MIT License.
  * See LICENSE file for more information.
@@ -6,7 +6,6 @@
 
 #include "cudaSift.h"
 #include "matching.h"
-#include "wrapper.h"
 
 #include "saiga/opencv/opencv.h"
 #include "saiga/time/performanceMeasure.h"
@@ -30,14 +29,14 @@ void detectedKeypointsTest(){
 
         //load image with opencv
         cv::Mat1f img = cv::imread("data/"+str,cv::IMREAD_GRAYSCALE);
-        ImageView<float> iv = Saiga::MatToImageView<float>(img);
+        SiftImageType iv = Saiga::MatToImageView<float>(img);
         Saiga::CUDA::CudaImage<float> cimg(iv);
-        cout << "Image " << str << " Size: " << cimg.width << "x" << cimg.height << endl;
+        cout << "Image " << str << " Size: " << cimg.cols << "x" << cimg.rows << endl;
 
         //initialize sift and init memory. Note: this object can be used for multiple
         //images of the same size
         int maxFeatures = 10000;
-        SIFTGPU sift(cimg.width,cimg.height,false,-1,maxFeatures,3,0.04,10,1.6);
+        SIFT_CUDA sift(cimg.cols,cimg.rows,false,-1,maxFeatures,3,0.04,10,1.6);
         sift.initMemory();
 
         //extract keypoints and descriptors and store them in gpu memory
@@ -58,12 +57,13 @@ void detectedKeypointsTest(){
         cout << "Extracted " << extractedPoints << " keypoints." << endl;
 
         //copy to host
-        thrust::host_vector<SiftPoint> hkeypoints(extractedPoints);
-        thrust::copy(keypoints.begin(),keypoints.begin()+extractedPoints,hkeypoints.begin());
+//        thrust::host_vector<SiftPoint> hkeypoints(extractedPoints);
+//        thrust::copy(keypoints.begin(),keypoints.begin()+extractedPoints,hkeypoints.begin());
 
         //convert to cvkeypoints
         std::vector<cv::KeyPoint> cvkeypoints;
-        SiftWrapper::KeypointsToCV(hkeypoints,cvkeypoints);
+//        sift.KeypointsToCV(hkeypoints,cvkeypoints);
+        sift.downloadKeypoints(Saiga::array_view<SiftPoint>(keypoints).slice_n(0, extractedPoints), cvkeypoints);
 
         //create debug image
         cv::Mat output;
@@ -95,7 +95,7 @@ void matchTest(){
     };
     int iterations = 50;
 
-    for(int i =0; i < imageFiles1.size() ; ++i){
+    for(int i =0; i < (int)imageFiles1.size() ; ++i){
 
         //load image with opencv
         cv::Mat1f img1 = cv::imread("data/"+imageFiles1[i],cv::IMREAD_GRAYSCALE);
@@ -106,11 +106,10 @@ void matchTest(){
 
         Saiga::CUDA::CudaImage<float> cimg2(img2.rows,img2.cols,Saiga::iAlignUp(img2.cols*sizeof(float),256));
         copyImage(Saiga::MatToImageView<float>(img2),cimg2,cudaMemcpyHostToDevice);
-        //        Saiga::CUDA::CudaImage<float> cimg1(Saiga::MatToImageView<float>(img1));
-        //        Saiga::CUDA::CudaImage<float> cimg2(Saiga::MatToImageView<float>(img2));
+
 
         int maxFeatures = 10000;
-        SIFTGPU sift(cimg1.width,cimg1.height,false,-1,maxFeatures,3,0.04,10,1.6);
+        SIFT_CUDA sift(cimg1.cols,cimg1.rows,false,-1,maxFeatures,3,0.04,10,1.6);
         sift.initMemory();
 
         //extract keypoints and descriptors and store them in gpu memory
@@ -164,13 +163,15 @@ void matchTest(){
         cout << "Number of good matches: " << cvmatches.size() << endl;
 
 
-        std::vector<SiftPoint> hkeypoints1(extractedPoints1), hkeypoints2(extractedPoints2);
-        thrust::copy(keypoints1.begin(),keypoints1.begin()+extractedPoints1,hkeypoints1.begin());
-        thrust::copy(keypoints2.begin(),keypoints2.begin()+extractedPoints2,hkeypoints2.begin());
+//        std::vector<SiftPoint> hkeypoints1(extractedPoints1), hkeypoints2(extractedPoints2);
+//        thrust::copy(keypoints1.begin(),keypoints1.begin()+extractedPoints1,hkeypoints1.begin());
+//        thrust::copy(keypoints2.begin(),keypoints2.begin()+extractedPoints2,hkeypoints2.begin());
         //convert to cvkeypoints
         std::vector<cv::KeyPoint> cvkeypoints1, cvkeypoints2;
-        SiftWrapper::KeypointsToCV(hkeypoints1,cvkeypoints1);
-        SiftWrapper::KeypointsToCV(hkeypoints2,cvkeypoints2);
+        sift.downloadKeypoints(Saiga::array_view<SiftPoint>(keypoints1).slice_n(0, extractedPoints1), cvkeypoints1);
+        sift.downloadKeypoints(Saiga::array_view<SiftPoint>(keypoints2).slice_n(0, extractedPoints2), cvkeypoints2);
+//        sift.KeypointsToCV(hkeypoints1,cvkeypoints1);
+//        sift.KeypointsToCV(hkeypoints2,cvkeypoints2);
 
         {
             cv::Mat img1 = cv::imread("data/"+imageFiles1[i]);

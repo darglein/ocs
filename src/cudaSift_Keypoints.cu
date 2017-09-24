@@ -256,7 +256,6 @@ void d_FindPointsMulti4(
 
     const unsigned int tx = threadIdx.x;
     const unsigned int ty = threadIdx.y;
-    const unsigned int t =  ty * TILE_W + tx;
 
     const int RADIUS = 1;
     int x_tile = blockIdx.x * (TILE_W - 2 * RADIUS) - RADIUS + SIFT_IMG_BORDER;
@@ -281,8 +280,8 @@ void d_FindPointsMulti4(
     //don't produce keypoint at the border
     if(xo < SIFT_IMG_BORDER
             || yo < SIFT_IMG_BORDER
-            || xo >= images.imgStart.width-SIFT_IMG_BORDER
-            || yo >= images.imgStart.height-SIFT_IMG_BORDER)
+            || xo >= images.imgStart.cols-SIFT_IMG_BORDER
+            || yo >= images.imgStart.rows-SIFT_IMG_BORDER)
     {
         return;
     }
@@ -354,8 +353,8 @@ void d_FindPointsMulti4(
             layer += Saiga::iRound(xi);
 
             if (layer < 1 || layer > LAYERS ||
-                    x < SIFT_IMG_BORDER || x >= images.imgStart.width - SIFT_IMG_BORDER  ||
-                    y < SIFT_IMG_BORDER || y >= images.imgStart.height - SIFT_IMG_BORDER ){
+                    x < SIFT_IMG_BORDER || x >= images.imgStart.cols - SIFT_IMG_BORDER  ||
+                    y < SIFT_IMG_BORDER || y >= images.imgStart.rows - SIFT_IMG_BORDER ){
                 i = 1234124527;
                 break;
             }
@@ -424,8 +423,8 @@ void findPointsCaller(
         unsigned int* pointCounter,
         float contrastThreshold, float edgeThreshold, int octave, int layers, float sigma, int maxFeatures, int threshold)
 {
-    int w = images[0].width;
-    int h = images[0].height;
+    int w = images[0].cols;
+    int h = images[0].rows;
 
     const int TILE_W = 32;
     const int TILE_H = 16;
@@ -451,11 +450,14 @@ void findPointsCaller(
 }
 
 
-void SIFTGPU::FindPointsMulti(Saiga::array_view<SiftPoint> keypoints, Saiga::ImageArrayView<float> images, int o){
+void FindPointsMulti(Saiga::array_view<SiftPoint> keypoints, Saiga::ImageArrayView<float> images,
+                                unsigned int* pointCounter,
+                             float contrastThreshold, float edgeThreshold, int octave, int layers, float sigma, int maxFeatures)
+{
 #ifdef SIFT_PRINT_TIMINGS
-    Saiga::CUDA::CudaScopedTimerPrint tim("SIFTGPU::FindPointsMulti");
+    Saiga::CUDA::CudaScopedTimerPrint tim("SIFT_CUDA::FindPointsMulti");
 #endif
-    int threshold = Saiga::iFloor(0.5 * contrastThreshold / nOctaveLayers * 255 * SIFT_FIXPT_SCALE);
+    int threshold = Saiga::iFloor(0.5 * contrastThreshold / layers * 255 * SIFT_FIXPT_SCALE);
 
     {
         using FindKeypointsFunctionType = std::function<void(Saiga::ImageArrayView<float>, Saiga::array_view<SiftPoint>, unsigned int*, float, float, int octave, int, float, int, int)>;
@@ -468,10 +470,10 @@ void SIFTGPU::FindPointsMulti(Saiga::array_view<SiftPoint> keypoints, Saiga::Ima
             findPointsCaller<6>,
         };
 
-        f[nOctaveLayers - 1](images,
+        f[layers - 1](images,
                              keypoints,
-                             thrust::raw_pointer_cast(pointCounter.data()),
-                             contrastThreshold, edgeThreshold, o, nOctaveLayers, sigma, nfeatures, threshold);
+                            pointCounter,
+                             contrastThreshold, edgeThreshold, octave, layers, sigma, maxFeatures, threshold);
     }
 
     CUDA_SYNC_CHECK_ERROR();

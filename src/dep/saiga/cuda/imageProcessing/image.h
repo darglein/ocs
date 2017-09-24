@@ -16,7 +16,7 @@ namespace CUDA {
 
 template<typename T>
 void copyImage(ImageView<T> imgSrc, ImageView<T> imgDst, enum cudaMemcpyKind kind){
-    CHECK_CUDA_ERROR(cudaMemcpy2D(imgDst.data,imgDst.pitchBytes,imgSrc.data,imgSrc.pitchBytes,imgSrc.width*sizeof(T),imgSrc.height,kind));
+    CHECK_CUDA_ERROR(cudaMemcpy2D(imgDst.data,imgDst.pitchBytes,imgSrc.data,imgSrc.pitchBytes,imgSrc.cols*sizeof(T),imgSrc.rows,kind));
 }
 
 
@@ -101,8 +101,8 @@ void swap(CudaImage<T> &first, CudaImage<T> &second)
 {
     using std::swap;
     first.v.swap(second.v);
-    swap(first.width,second.width);
-    swap(first.height,second.height);
+    swap(first.cols,second.cols);
+    swap(first.rows,second.rows);
     swap(first.pitchBytes,second.pitchBytes);
     swap(first.data,second.data);
 }

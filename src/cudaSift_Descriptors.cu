@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Copyright (c) 2017 Darius Rückert
  * Licensed under the MIT License.
  * See LICENSE file for more information.
@@ -118,7 +118,7 @@
 namespace cudasift {
 template<unsigned int THREADS_PER_BLOCK, int MAX_RADIUS>
 __device__ inline
-void calcSIFTDescriptorBlock( ImageView<float> d_img,
+void calcSIFTDescriptorBlock( SiftImageType d_img,
                               int px, int py, float ori, float scl, float* hist, float* dst, float* sreduce, int local_thread_id, int lane_id ){
 
     const int d = SIFT_DESCR_WIDTH; //4
@@ -135,13 +135,13 @@ void calcSIFTDescriptorBlock( ImageView<float> d_img,
         hist_width = MAX_RADIUS / (1.4142135623730951f * (d + 1) * 0.5f);
     }
 
-	float cos_t = cosf(ori*(float)(SIFT_PI / 180));
-	float sin_t = sinf(ori*(float)(SIFT_PI / 180));
+    float cos_t = cosf(ori*(float)(SIFT_PI / 180));
+    float sin_t = sinf(ori*(float)(SIFT_PI / 180));
     cos_t /= hist_width;
     sin_t /= hist_width;
 
     // Clip the radius to the diagonal of the image
-    radius = min(radius, (int) sqrtf(d_img.width*d_img.width + d_img.height*d_img.height));
+    radius = min(radius, (int) sqrtf(d_img.cols*d_img.cols + d_img.rows*d_img.rows));
 
     int numSample = (radius*2+1)*(radius*2+1);
 
@@ -179,7 +179,7 @@ void calcSIFTDescriptorBlock( ImageView<float> d_img,
         int y = py + i;
 
         if( rbin > -1 && rbin < d && cbin > -1 && cbin < d &&
-                y > 0 && y < d_img.height - 1 && x > 0 && x < d_img.width - 1 )
+                y > 0 && y < d_img.rows - 1 && x > 0 && x < d_img.cols - 1 )
         {
             float dx = d_img(y,x+1) - d_img(y,x-1);
             float dy = d_img(y-1,x) - d_img(y+1,x);
@@ -219,16 +219,7 @@ void calcSIFTDescriptorBlock( ImageView<float> d_img,
             float v_rco001 = v_rc00*obin, v_rco000 = v_rc00 - v_rco001;
 
             int idx = ((r0+1)*(d+2) + c0+1)*(n+2) + o0;
-#if 0
-            hist[idx] += v_rco000;
-            hist[idx+1] += v_rco001;
-            hist[idx+(n+2)] += v_rco010;
-            hist[idx+(n+3)] += v_rco011;
-            hist[idx+(d+2)*(n+2)] += v_rco100;
-            hist[idx+(d+2)*(n+2)+1] += v_rco101;
-            hist[idx+(d+3)*(n+2)] += v_rco110;
-            hist[idx+(d+3)*(n+2)+1] += v_rco111;
-#else
+
             //this is currently the main bottleneck
             atomicAdd(&hist[idx] , v_rco000);
             atomicAdd(&hist[idx+1] , v_rco001);
@@ -239,8 +230,6 @@ void calcSIFTDescriptorBlock( ImageView<float> d_img,
             atomicAdd(&hist[idx+(d+2)*(n+2)+1] , v_rco101);
             atomicAdd(&hist[idx+(d+3)*(n+2)] , v_rco110);
             atomicAdd(&hist[idx+(d+3)*(n+2)+1] , v_rco111);
-#endif
-
         }
     }
 
@@ -248,9 +237,7 @@ void calcSIFTDescriptorBlock( ImageView<float> d_img,
     __syncthreads();
 
 
-
     // finalize histogram, since the orientation histograms are circular
-    //    for(int l = local_thread_id; l < d*d; l+=THREADS_PER_BLOCK ){
     WARP_FOR(l,local_thread_id,d*d,THREADS_PER_BLOCK)
     {
         int i = l / d;
@@ -275,12 +262,7 @@ void calcSIFTDescriptorBlock( ImageView<float> d_img,
     }
 
 
-
-    //__syncthreads();
-
-
     // apply hysteresis thresholding
-
     float nrm2 = dst[local_thread_id];
     nrm2 = nrm2 * nrm2;
     {
@@ -315,7 +297,7 @@ void calcSIFTDescriptorBlock( ImageView<float> d_img,
 
 
 
-	nrm2 = SIFT_INT_DESCR_FCTR / max(sqrtf(nrm2), SIFT_FLT_EPSILON);
+    nrm2 = SIFT_INT_DESCR_FCTR / max(sqrtf(nrm2), SIFT_FLT_EPSILON);
 
     {
         dst[local_thread_id] = dst[local_thread_id]*nrm2;
@@ -333,7 +315,7 @@ __global__ void calcSIFTDescriptorsBlock(
         )
 {
 
-//    Saiga::CUDA::ThreadInfo<THREADS_PER_BLOCK> ti;
+    //    Saiga::CUDA::ThreadInfo<THREADS_PER_BLOCK> ti;
 
     const int d = SIFT_DESCR_WIDTH; //4
     const int n = SIFT_DESCR_HIST_BINS; //8
@@ -365,7 +347,7 @@ __global__ void calcSIFTDescriptorsBlock(
 
 
     float angle = 360.0f - sp.orientation;
-	if (fabsf(angle - 360.f) < SIFT_FLT_EPSILON)
+    if (fabsf(angle - 360.f) < SIFT_FLT_EPSILON)
         angle = 0.f;
 
 
@@ -375,23 +357,15 @@ __global__ void calcSIFTDescriptorsBlock(
     float size = sp.size*scale;
 
 
-    ImageView<float> d_img = images[layer];
+    SiftImageType d_img = images[layer];
     calcSIFTDescriptorBlock<THREADS_PER_BLOCK,MAX_RADIUS>(d_img,sp.ixpos,sp.iypos,angle, size*0.5f, hist, desc,sreduce,threadIdx.x,threadIdx.x & (WARP_SIZE-1));
 
-    //Don't need this syncthreads because every warp writes its own computed values
-    //    __syncthreads();
-
-    //    for(int k = ti.local_thread_id; k < desclen; k+=THREADS_PER_BLOCK )
-    {
-        rdesc[threadIdx.x] = desc[threadIdx.x];
-    }
-
-
+    rdesc[threadIdx.x] = desc[threadIdx.x];
 }
 
-void SIFTGPU::descriptorsMulti(Saiga::array_view<SiftPoint> keypoints, Saiga::array_view<float> descriptors, Saiga::ImageArrayView<float> images, int start, int length){
+void descriptorsMulti(Saiga::array_view<SiftPoint> keypoints, Saiga::array_view<float> descriptors, Saiga::ImageArrayView<float> images, int start, int length){
 #ifdef SIFT_PRINT_TIMINGS
-    Saiga::CUDA::CudaScopedTimerPrint tim("   SIFTGPU::descriptorsMulti");
+    Saiga::CUDA::CudaScopedTimerPrint tim("   SIFT_CUDA::descriptorsMulti");
 #endif
     const int BLOCK_SIZE = 128;
     calcSIFTDescriptorsBlock<BLOCK_SIZE,SIFT_DESCR_MAX_RADIUS><<<Saiga::iDivUp(length*BLOCK_SIZE, BLOCK_SIZE),BLOCK_SIZE>>>(images,

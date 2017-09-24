@@ -60,6 +60,7 @@ find_package(SAIGA)
 if(SAIGA_FOUND)
 	include_directories(${SAIGA_INCLUDE_DIRS})
 	SET(LIBS ${LIBS} ${SAIGA_LIBRARY})
+	set(OCS_USE_SAIGA 1)
 	add_definitions(-DHAS_SAIGA)
 endif()
 
@@ -69,13 +70,13 @@ find_package(OpenCV REQUIRED )
 include_directories(${OpenCV_INCLUDE_DIRS})
 SET(LIBS ${LIBS} ${OpenCV_LIBRARIES})
 message(STATUS "OpenCV: ${OpenCV_INCLUDE_DIRS} ${OpenCV_LIBRARIES}")
-
+set(OCS_USE_OPENCV 1)
 
 ############# COMPILER FLAGS ###############
 
 
 if(UNIX)
-	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Wno-long-long")
 endif(UNIX)
 
 if(MSVC)
@@ -88,6 +89,15 @@ if(CUDA_DEBUG)
 else()
 	add_definitions(-DCUDA_NDEBUG)
 endif()
+
+############# Generate config file ###############
+
+configure_file (
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/buildconfig.h.in"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/buildconfig.h"
+)
+
+
 
 ############# SOURCE ###############
 

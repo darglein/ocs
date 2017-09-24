@@ -111,9 +111,13 @@
 
 namespace cudasift {
 
-void SIFTGPU::buildGaussianPyramid(){
+void buildGaussianPyramid(
+        std::vector<SiftImageType>& gaussianPyramid2,
+        int nOctaveLayers, int numOctaves,
+        std::vector<thrust::device_vector<float>>& octaveBlurKernels)
+{
 #ifdef SIFT_PRINT_TIMINGS
-    Saiga::CUDA::CudaScopedTimerPrint tim("SIFTGPU::buildGaussianPyramid");
+    Saiga::CUDA::CudaScopedTimerPrint tim("SIFT_CUDA::buildGaussianPyramid");
 #endif
 
     for(int o = 0; o < numOctaves; ++o)
@@ -132,7 +136,7 @@ void SIFTGPU::buildGaussianPyramid(){
                 Saiga::CUDA::applyFilterSeparateSinglePass(src,dst,octaveBlurKernels[i]);
 #else
                 //use single pass filter for small images
-                if(src.width > 200){
+                if(src.cols > 200){
                     auto& tmp = tmpImages[o];
                     Saiga::CUDA::applyFilterSeparate(src,dst,tmp,octaveBlurKernels[i],octaveBlurKernels[i]);
                 }else{
@@ -144,9 +148,13 @@ void SIFTGPU::buildGaussianPyramid(){
     }
 }
 
-void SIFTGPU::buildDoGPyramid(){
+void buildDoGPyramid(
+        std::vector<SiftImageType>& gaussianPyramid2,
+        std::vector<SiftImageType>& dogPyramid2,
+                                int nOctaveLayers, int numOctaves)
+{
 #ifdef SIFT_PRINT_TIMINGS
-    Saiga::CUDA::CudaScopedTimerPrint tim("SIFTGPU::buildDoGPyramid");
+    Saiga::CUDA::CudaScopedTimerPrint tim("SIFT_CUDA::buildDoGPyramid");
 #endif
 
     for( int o = 0; o < numOctaves; o++ )

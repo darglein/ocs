@@ -14,7 +14,7 @@ namespace CUDA {
 
 
 // dst = src1 - src2
-SAIGA_GLOBAL void subtract(ImageView<float> src1, ImageView<float> src2, ImageView<float> dst);
+SAIGA_GLOBAL void subtract(SiftImageType src1, SiftImageType src2, SiftImageType dst);
 
 //subtract multiple images at the same time
 //src.n - 1 == dst.n
@@ -24,18 +24,18 @@ SAIGA_GLOBAL void subtract(ImageView<float> src1, ImageView<float> src2, ImageVi
 SAIGA_GLOBAL void subtractMulti(ImageArrayView<float> src, ImageArrayView<float> dst);
 
 
-SAIGA_GLOBAL void fill(ImageView<float> img, float value);
+SAIGA_GLOBAL void fill(SiftImageType img, float value);
 
 //==================== Image Scaling ======================
 
-SAIGA_GLOBAL void scaleDown2EveryOther(ImageView<float> src, ImageView<float> dst);
-SAIGA_GLOBAL void scaleUp2Linear(ImageView<float> src, ImageView<float> dst);
+SAIGA_GLOBAL void scaleDown2EveryOther(SiftImageType src, SiftImageType dst);
+SAIGA_GLOBAL void scaleUp2Linear(SiftImageType src, SiftImageType dst);
 
 //==================== Image Format Conversions ======================
 
 SAIGA_GLOBAL void convertRGBtoRGBA(ImageView<uchar3> src, ImageView<uchar4> dst, unsigned char alpha = 255);
 SAIGA_GLOBAL void convertRGBAtoRGB(ImageView<uchar4> src, ImageView<uchar3> dst);
-SAIGA_GLOBAL void convertRGBAtoGrayscale(ImageView<uchar4> src, ImageView<float> dst);
+SAIGA_GLOBAL void convertRGBAtoGrayscale(ImageView<uchar4> src, SiftImageType dst);
 SAIGA_GLOBAL void convertBGRtoRGBA(ImageView<uchar3> src, ImageView<uchar4> dst, unsigned char alpha = 255);
 SAIGA_GLOBAL void convertRGBAtoBGR(ImageView<uchar4> src, ImageView<uchar3> dst);
 
@@ -44,19 +44,19 @@ SAIGA_GLOBAL void convertRGBAtoBGR(ImageView<uchar4> src, ImageView<uchar3> dst)
 #define SAIGA_MAX_CONVOLUTION_RADIUS 10
 #define SAIGA_MAX_KERNEL_SIZE (SAIGA_MAX_CONVOLUTION_RADIUS*2+1)
 
-SAIGA_GLOBAL void convolveSinglePassSeparateOuterLinear(ImageView<float> src, ImageView<float> dst, Saiga::array_view<float> kernel, int radius);
-SAIGA_GLOBAL void convolveSinglePassSeparateOuterHalo(ImageView<float> src, ImageView<float> dst, Saiga::array_view<float> kernel, int radius);
-SAIGA_GLOBAL void convolveSinglePassSeparateInner(ImageView<float> src, ImageView<float> dst, Saiga::array_view<float> kernel, int radius);
-SAIGA_GLOBAL void convolveSinglePassSeparateInner75(ImageView<float> src, ImageView<float> dst, Saiga::array_view<float> kernel, int radius);
+SAIGA_GLOBAL void convolveSinglePassSeparateOuterLinear(SiftImageType src, SiftImageType dst, Saiga::array_view<float> kernel, int radius);
+SAIGA_GLOBAL void convolveSinglePassSeparateOuterHalo(SiftImageType src, SiftImageType dst, Saiga::array_view<float> kernel, int radius);
+SAIGA_GLOBAL void convolveSinglePassSeparateInner(SiftImageType src, SiftImageType dst, Saiga::array_view<float> kernel, int radius);
+SAIGA_GLOBAL void convolveSinglePassSeparateInner75(SiftImageType src, SiftImageType dst, Saiga::array_view<float> kernel, int radius);
 
-SAIGA_GLOBAL void convolveRow(ImageView<float> src, ImageView<float> dst, Saiga::array_view<float> kernel, int radius);
-SAIGA_GLOBAL void convolveCol(ImageView<float> src, ImageView<float> dst, Saiga::array_view<float> kernel, int radius);
+SAIGA_GLOBAL void convolveRow(SiftImageType src, SiftImageType dst, Saiga::array_view<float> kernel, int radius);
+SAIGA_GLOBAL void convolveCol(SiftImageType src, SiftImageType dst, Saiga::array_view<float> kernel, int radius);
 
 SAIGA_GLOBAL thrust::device_vector<float> createGaussianBlurKernel(int radius, float sigma);
 
 //uploads kernel and convoles images
-SAIGA_GLOBAL void applyFilterSeparate(ImageView<float> src, ImageView<float> dst, ImageView<float> tmp, array_view<float> kernelRow, array_view<float> kernelCol);
-SAIGA_GLOBAL void applyFilterSeparateSinglePass(ImageView<float> src, ImageView<float> dst, array_view<float> kernel);
+SAIGA_GLOBAL void applyFilterSeparate(SiftImageType src, SiftImageType dst, SiftImageType tmp, array_view<float> kernelRow, array_view<float> kernelCol);
+SAIGA_GLOBAL void applyFilterSeparateSinglePass(SiftImageType src, SiftImageType dst, array_view<float> kernel);
 
 
 }
