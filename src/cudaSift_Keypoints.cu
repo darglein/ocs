@@ -421,7 +421,7 @@ void findPointsCaller(
         Saiga::ImageArrayView<float> images,
         Saiga::array_view<SiftPoint> keypoints,
         unsigned int* pointCounter,
-        float contrastThreshold, float edgeThreshold, int octave, int layers, float sigma, int maxFeatures, int threshold)
+        float contrastThreshold, float edgeThreshold, int octave, float sigma, int maxFeatures, int threshold)
 {
     int w = images[0].cols;
     int h = images[0].rows;
@@ -451,8 +451,8 @@ void findPointsCaller(
 
 
 void FindPointsMulti(Saiga::array_view<SiftPoint> keypoints, Saiga::ImageArrayView<float> images,
-                                unsigned int* pointCounter,
-                             float contrastThreshold, float edgeThreshold, int octave, int layers, float sigma, int maxFeatures)
+                     unsigned int* pointCounter,
+                     float contrastThreshold, float edgeThreshold, int octave, int layers, float sigma, int maxFeatures)
 {
 #ifdef SIFT_PRINT_TIMINGS
     Saiga::CUDA::CudaScopedTimerPrint tim("SIFT_CUDA::FindPointsMulti");
@@ -460,7 +460,7 @@ void FindPointsMulti(Saiga::array_view<SiftPoint> keypoints, Saiga::ImageArrayVi
     int threshold = Saiga::iFloor(0.5 * contrastThreshold / layers * 255 * SIFT_FIXPT_SCALE);
 
     {
-        using FindKeypointsFunctionType = std::function<void(Saiga::ImageArrayView<float>, Saiga::array_view<SiftPoint>, unsigned int*, float, float, int octave, int, float, int, int)>;
+        using FindKeypointsFunctionType = std::function<void(Saiga::ImageArrayView<float>, Saiga::array_view<SiftPoint>, unsigned int*, float, float, int octave, float, int, int)>;
         FindKeypointsFunctionType f[6] = {
             findPointsCaller<1>,
             findPointsCaller<2>,
@@ -471,9 +471,9 @@ void FindPointsMulti(Saiga::array_view<SiftPoint> keypoints, Saiga::ImageArrayVi
         };
 
         f[layers - 1](images,
-                             keypoints,
-                            pointCounter,
-                             contrastThreshold, edgeThreshold, octave, layers, sigma, maxFeatures, threshold);
+                      keypoints,
+                      pointCounter,
+                      contrastThreshold, edgeThreshold, octave, sigma, maxFeatures, threshold);
     }
 
     CUDA_SYNC_CHECK_ERROR();

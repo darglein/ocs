@@ -184,9 +184,6 @@ public:
 #endif
 
 private:
-    void createKernels();
-    void createInitialImage(SiftImageType src, SiftImageType dst, SiftImageType tmp);
-
 
     int findScaleSpaceExtrema(Saiga::array_view<SiftPoint> keypoints, Saiga::array_view<float> descriptors);
 

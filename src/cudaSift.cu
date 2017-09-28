@@ -157,26 +157,7 @@ static void scaleDownKeypoints(Saiga::array_view<SiftPoint> keypoints){
 }
 
 
-int SIFT_CUDA::compute(SiftImageType d_img, Saiga::array_view<SiftPoint> keypoints, Saiga::array_view<float> descriptors) {
-    initMemory();
-#ifdef SIFT_PRINT_TIMINGS
-    Saiga::CUDA::CudaScopedTimerPrint tim("SIFT_CUDA::compute");
-#endif
-    createInitialImage(d_img,gaussianPyramid2[0],gaussianPyramid2[1]);
-    buildGaussianPyramid(gaussianPyramid2,nOctaveLayers,numOctaves,octaveBlurKernels);
-    buildDoGPyramid(gaussianPyramid2,dogPyramid2,nOctaveLayers,numOctaves);
-    int n = findScaleSpaceExtrema(keypoints,descriptors);
-    if( doubleScale ){
-        scaleDownKeypoints(keypoints);
-    }
-
-    CUDA_SYNC_CHECK_ERROR();
-    return n;
-}
-
-
-
-void SIFT_CUDA::createInitialImage(SiftImageType src, SiftImageType dst, SiftImageType tmp){
+static void createInitialImage(SiftImageType src, SiftImageType dst, SiftImageType tmp, thrust::device_vector<float>& initialBlurKernel, bool doubleScale){
 #ifdef SIFT_DEBUG
     cout << "createInitialImage. lowimg: " << dst.cols << "x" << dst.rows << " img: " << src.cols << "x" << src.rows << " sigma: " << sigma << endl;
 #endif
@@ -203,6 +184,27 @@ void SIFT_CUDA::createInitialImage(SiftImageType src, SiftImageType dst, SiftIma
     CUDA_SYNC_CHECK_ERROR();
 
 }
+
+
+int SIFT_CUDA::compute(SiftImageType d_img, Saiga::array_view<SiftPoint> keypoints, Saiga::array_view<float> descriptors) {
+    initMemory();
+#ifdef SIFT_PRINT_TIMINGS
+    Saiga::CUDA::CudaScopedTimerPrint tim("SIFT_CUDA::compute");
+#endif
+    createInitialImage(d_img,gaussianPyramid2[0],gaussianPyramid2[1],initialBlurKernel,doubleScale);
+    buildGaussianPyramid(gaussianPyramid2,nOctaveLayers,numOctaves,octaveBlurKernels);
+    buildDoGPyramid(gaussianPyramid2,dogPyramid2,nOctaveLayers,numOctaves);
+    int n = findScaleSpaceExtrema(keypoints,descriptors);
+    if( doubleScale ){
+        scaleDownKeypoints(keypoints);
+    }
+
+    CUDA_SYNC_CHECK_ERROR();
+    return n;
+}
+
+
+
 
 
 int SIFT_CUDA::findScaleSpaceExtrema(Saiga::array_view<SiftPoint> keypoints, Saiga::array_view<float> descriptors)
