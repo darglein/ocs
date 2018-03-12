@@ -37,8 +37,7 @@ Sift Parameters:
 | --- | --- | --- | --- |--- |--- |
 | #Features | 990 | 1408 | 1700 | 3382 |6184 |
 | GTX 1080 | 1.185 | 1.867 | 2.683 | 4.974 |8.445 |
-| GTX 970 | 2.393 | 3.569| 4.639 | 8.513 |14.133 |
-| GTX 760 | 3.245 | 5.630 | 8.651 | 17.639 |31.302 |
+| GTX 970 | 1.917 | 2.880 | 4.165 | 8.240 | 14.133 |
 
 ### Matching
 
@@ -72,12 +71,9 @@ int extractedPoints = sift.compute(d_img, keypoints, descriptors)
 ## Dependencies
 
  * [CUDA 8](https://developer.nvidia.com/cuda-downloads)
+ * [Saiga](https://github.com/darglein/saiga) 
 
 ## Optional Dependencies
-
- * [Saiga](https://github.com/darglein/saiga) 
- 
-The important files of saiga are included in src/dep. If you have saiga installed on your system, the installed library will be used.
 
  * [OpenCV](https://github.com/opencv/opencv) 
  

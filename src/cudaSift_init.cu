@@ -121,6 +121,10 @@ SIFT_CUDA::SIFT_CUDA(int _imageWidth, int _imageHeight, bool _doubleScale, int m
     numOctaves =  Saiga::iRound(std::log( (double)std::min( imageWidth, imageHeight ) ) / std::log(2.) - 2) + 1;
     if(maxOctaves > 0)
         numOctaves = std::min(numOctaves,maxOctaves);
+
+    cout << "SIFT_CUDA" << endl;
+    cout << "numOctaves " << numOctaves << endl;
+    cout << "nOctaveLayers " << nOctaveLayers << endl;
 }
 
 SIFT_CUDA::~SIFT_CUDA(){

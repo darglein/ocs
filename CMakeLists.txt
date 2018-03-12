@@ -56,7 +56,7 @@ message(STATUS "CUDA_LIBRARIES: ${CUDA_LIBRARIES}")
 
 
 #saiga
-find_package(SAIGA)
+find_package(SAIGA REQUIRED)
 if(SAIGA_FOUND)
 	include_directories(${SAIGA_INCLUDE_DIRS})
 	SET(LIBS ${LIBS} ${SAIGA_LIBRARY})

@@ -20,8 +20,18 @@ void detectedKeypointsTest(){
         "big.jpg",
         "landscape_small.jpg",
         "landscape.jpg",
+//        "100.png",
+//        "100_2.png",
+//        "100_3.png",
+//        "425_34.png",
+//        "420_109.png",
     };
+
+#ifdef SIFT_PRINT_TIMINGS
+    int iterations = 1;
+#else
     int iterations = 50;
+#endif
 
 
     for(auto str : imageFiles){
@@ -30,8 +40,11 @@ void detectedKeypointsTest(){
         //load image with opencv
         cv::Mat1f img = cv::imread("data/"+str,cv::IMREAD_GRAYSCALE);
         SiftImageType iv = Saiga::MatToImageView<float>(img);
-        Saiga::CUDA::CudaImage<float> cimg(iv);
-        cout << "Image " << str << " Size: " << cimg.cols << "x" << cimg.rows << endl;
+        Saiga::CUDA::CudaImage<float> cimg(img.rows,img.cols,Saiga::iAlignUp(img.cols*sizeof(float),256));
+
+        Saiga::CUDA::copyImage(iv,cimg,cudaMemcpyHostToDevice);
+
+        cout << "Image " << str << " Size: " << cimg.cols << "x" << cimg.rows << " pitch " << cimg.pitchBytes << endl;
 
         //initialize sift and init memory. Note: this object can be used for multiple
         //images of the same size
@@ -70,7 +83,7 @@ void detectedKeypointsTest(){
         img.convertTo(output,CV_8UC1);
         cv::drawKeypoints(output, cvkeypoints, output,cv::Scalar(0,255,0,0), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS );
 
-        cv::imwrite("out/"+str+".features.jpg",output);
+        cv::imwrite("out/"+str+".features.png",output);
         cout << endl;
         CUDA_SYNC_CHECK_ERROR();
 
@@ -80,20 +93,32 @@ void detectedKeypointsTest(){
 
 void matchTest(){
     std::vector<std::string> imageFiles1 = {
-        "small.jpg",
-        "medium.jpg",
-        "big.jpg",
-        "landscape_small.jpg",
-        "landscape.jpg",
+//        "small.jpg",
+//        "medium.jpg",
+//        "big.jpg",
+//        "landscape_small.jpg",
+//        "landscape.jpg",
+        "100.png",
+        "100_2.png",
+        "100_3.png",
     };
     std::vector<std::string> imageFiles2 = {
-        "small.jpg",
-        "medium.jpg",
-        "big.jpg",
-        "landscape_small.jpg",
-        "landscape.jpg",
+//        "small.jpg",
+//        "medium.jpg",
+//        "big.jpg",
+//        "landscape_small.jpg",
+//        "landscape.jpg",
+
+        "135.png",
+        "135_2.png",
+        "135_3.png",
     };
+#ifdef SIFT_PRINT_TIMINGS
+    int iterations = 1;
+#else
     int iterations = 50;
+#endif
+
 
     for(int i =0; i < (int)imageFiles1.size() ; ++i){
 
@@ -178,8 +203,9 @@ void matchTest(){
             cv::Mat img2 = cv::imread("data/"+imageFiles2[i]);
             //create debug match image
             cv::Mat outImg;
-            cv::drawMatches(img1,cvkeypoints1,img2,cvkeypoints2,cvmatches,outImg,cv::Scalar(0,0,255),cv::Scalar(0,255,0),std::vector<char>(),cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
-            cv::imwrite("out/matches_"+imageFiles1[i]+"_"+imageFiles2[i]+".jpg",outImg);
+            //cv::drawMatches(img1,cvkeypoints1,img2,cvkeypoints2,cvmatches,outImg,cv::Scalar(0,0,255),cv::Scalar(0,255,0),std::vector<char>(),cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
+            cv::drawMatches(img1,cvkeypoints1,img2,cvkeypoints2,cvmatches,outImg,cv::Scalar(0,255,0),cv::Scalar(0,255,0),std::vector<char>(),cv::DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
+            cv::imwrite("out/matches_"+imageFiles1[i]+"_"+imageFiles2[i]+".png",outImg);
         }
 
         cout << endl;

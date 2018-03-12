@@ -17,7 +17,7 @@ int main(int argc, char *argv[]) {
     Saiga::CUDA::initCUDA();
 
     cudasift::detectedKeypointsTest();
-    cudasift::matchTest();
+//    cudasift::matchTest();
 
     Saiga::CUDA::destroyCUDA();
     return 0;
